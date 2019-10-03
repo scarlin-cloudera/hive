@@ -118,6 +118,19 @@ public class HiveRelBuilder extends RelBuilder {
     return this.push(sort);
   }
 
+  @Override
+  public RelBuilder sort(int... fields) {
+    return super.sort(fields);
+  }
+  @Override
+  public RelBuilder sort(RexNode... nodes) {
+    return super.sort(nodes);
+  }
+  @Override
+  public RelBuilder sort(Iterable<? extends RexNode> nodes) {
+    return super.sort(nodes);
+  }
+
   public static SqlFunction getFloorSqlFunction(TimeUnitRange flag) {
     switch (flag) {
       case YEAR:

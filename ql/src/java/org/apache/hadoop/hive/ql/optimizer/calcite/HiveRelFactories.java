@@ -123,8 +123,9 @@ public class HiveRelFactories {
    * .
    */
   private static class HiveFilterFactoryImpl implements FilterFactory {
+    // XXX: SJC variablesSet is ignored?
     @Override
-    public RelNode createFilter(RelNode child, RexNode condition) {
+    public RelNode createFilter(RelNode child, RexNode condition, Set<CorrelationId> variablesSet) {
       RelOptCluster cluster = child.getCluster();
       HiveFilter filter = new HiveFilter(cluster, TraitsUtil.getDefaultTraitSet(cluster), child, condition);
       return filter;
@@ -161,6 +162,11 @@ public class HiveRelFactories {
         Set<CorrelationId> variablesSet, JoinRelType joinType, boolean semiJoinDone) {
       // According to calcite, it is going to be removed before Calcite-2.0
       // TODO: to handle CorrelationId
+      if (joinType == JoinRelType.SEMI) {
+        final JoinInfo joinInfo = JoinInfo.of(left, right, condition);
+        final RelOptCluster cluster = left.getCluster();
+        return HiveSemiJoin.getSemiJoin(cluster, left.getTraitSet(), left, right, condition);
+      }
       return HiveJoin.getJoin(left.getCluster(), left, right, condition, joinType);
     }
   }
@@ -176,8 +182,7 @@ public class HiveRelFactories {
             RexNode condition) {
       final JoinInfo joinInfo = JoinInfo.of(left, right, condition);
       final RelOptCluster cluster = left.getCluster();
-      return HiveSemiJoin.getSemiJoin(cluster, left.getTraitSet(), left, right, condition,
-          joinInfo.leftKeys, joinInfo.rightKeys);
+      return HiveSemiJoin.getSemiJoin(cluster, left.getTraitSet(), left, right, condition);
     }
   }
 
@@ -197,15 +202,11 @@ public class HiveRelFactories {
 
   private static class HiveAggregateFactoryImpl implements AggregateFactory {
     @Override
-    public RelNode createAggregate(RelNode child, boolean indicator,
+    public RelNode createAggregate(RelNode child,
             ImmutableBitSet groupSet, ImmutableList<ImmutableBitSet> groupSets,
             List<AggregateCall> aggCalls) {
-        if (indicator) {
-          throw new IllegalStateException("Hive does not support indicator columns but Calcite "
-                  + "created an Aggregate operator containing them");
-        }
-        return new HiveAggregate(child.getCluster(), child.getTraitSet(), child,
-                groupSet, groupSets, aggCalls);
+      return new HiveAggregate(child.getCluster(), child.getTraitSet(), child,
+              groupSet, groupSets, aggCalls);
     }
   }
 
