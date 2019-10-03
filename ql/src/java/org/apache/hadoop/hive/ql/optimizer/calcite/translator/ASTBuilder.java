@@ -155,11 +155,13 @@ public class ASTBuilder {
     return b.node();
   }
 
+  //XXX: SJC is semiJoin easy to factor out?
   public static ASTNode join(ASTNode left, ASTNode right, JoinRelType joinType, ASTNode cond,
       boolean semiJoin) {
     ASTBuilder b = null;
 
     switch (joinType) {
+    case SEMI:
     case INNER:
       if (semiJoin) {
         b = ASTBuilder.construct(HiveParser.TOK_LEFTSEMIJOIN, "TOK_LEFTSEMIJOIN");

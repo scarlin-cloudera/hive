@@ -84,6 +84,7 @@ public class HiveJoinToMultiJoinRule extends RelOptRule {
     // 1. We try to merge this join with the left child
     RelNode multiJoin = mergeJoin(join, left, right);
     if (multiJoin != null) {
+      System.out.println("SJC: DOING A TRANSFORM 1");
       call.transformTo(multiJoin);
       return;
     }
@@ -113,6 +114,7 @@ public class HiveJoinToMultiJoinRule extends RelOptRule {
                 topProject.getChildExps(),
                 topProject.getRowType().getFieldNames());
       }
+      System.out.println("SJC: DOING A TRANSFORM 2");
       call.transformTo(multiJoin);
       return;
     }

@@ -50,7 +50,6 @@ import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.server.CalciteServerStatement;
-import org.apache.calcite.sql.SemiJoinType;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
@@ -133,7 +132,6 @@ public class HiveSubQRemoveRelBuilder {
   private final RelFactories.SortFactory sortFactory;
   private final RelFactories.SetOpFactory setOpFactory;
   private final RelFactories.JoinFactory joinFactory;
-  private final RelFactories.SemiJoinFactory semiJoinFactory;
   private final RelFactories.CorrelateFactory correlateFactory;
   private final RelFactories.ValuesFactory valuesFactory;
   private final RelFactories.TableScanFactory scanFactory;
@@ -164,9 +162,6 @@ public class HiveSubQRemoveRelBuilder {
     this.joinFactory =
         Util.first(context.unwrap(RelFactories.JoinFactory.class),
             HiveRelFactories.HIVE_JOIN_FACTORY);
-    this.semiJoinFactory =
-        Util.first(context.unwrap(RelFactories.SemiJoinFactory.class),
-            HiveRelFactories.HIVE_SEMI_JOIN_FACTORY);
     this.correlateFactory =
         Util.first(context.unwrap(RelFactories.CorrelateFactory.class),
             RelFactories.DEFAULT_CORRELATE_FACTORY);
@@ -1141,11 +1136,10 @@ public class HiveSubQRemoveRelBuilder {
       }
       if(createSemiJoin) {
         join = correlateFactory.createCorrelate(left.rel, right.rel, id,
-            requiredColumns, SemiJoinType.SEMI);
+            requiredColumns, JoinRelType.SEMI);
       } else {
         join = correlateFactory.createCorrelate(left.rel, right.rel, id,
-            requiredColumns, SemiJoinType.of(joinType));
-
+            requiredColumns, joinType);
       }
     } else {
       join = joinFactory.createJoin(left.rel, right.rel, condition,
@@ -1184,21 +1178,6 @@ public class HiveSubQRemoveRelBuilder {
               field(2, 1, fieldName)));
     }
     return join(joinType, conditions);
-  }
-
-  /** Creates a {@link org.apache.calcite.rel.core.SemiJoin}. */
-  public HiveSubQRemoveRelBuilder semiJoin(Iterable<? extends RexNode> conditions) {
-    final Frame right = stack.pop();
-    final Frame left = stack.pop();
-    final RelNode semiJoin =
-        semiJoinFactory.createSemiJoin(left.rel, right.rel, and(conditions));
-    stack.push(new Frame(semiJoin, left.right));
-    return this;
-  }
-
-  /** Creates a {@link org.apache.calcite.rel.core.SemiJoin}. */
-  public HiveSubQRemoveRelBuilder semiJoin(RexNode... conditions) {
-    return semiJoin(ImmutableList.copyOf(conditions));
   }
 
   /** Assigns a table alias to the top entry on the stack. */
