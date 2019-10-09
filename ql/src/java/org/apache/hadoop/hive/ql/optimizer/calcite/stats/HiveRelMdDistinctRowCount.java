@@ -85,6 +85,10 @@ public class HiveRelMdDistinctRowCount extends RelMdDistinctRowCount {
   @Override
   public Double getDistinctRowCount(Join rel, RelMetadataQuery mq, ImmutableBitSet groupKey,
       RexNode predicate) {
+    if (rel instanceof HiveSemiJoin) {
+      return super.getDistinctRowCount(rel, mq, groupKey, predicate);
+    }
+
     if (rel instanceof HiveJoin) {
       return getJoinDistinctRowCount(mq, rel, rel.getJoinType(),
           groupKey, predicate, true);
