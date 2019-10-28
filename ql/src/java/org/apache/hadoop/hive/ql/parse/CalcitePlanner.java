@@ -227,6 +227,7 @@ import org.apache.hadoop.hive.ql.optimizer.calcite.rules.views.HiveNoAggregateIn
 import org.apache.hadoop.hive.ql.optimizer.calcite.rules.views.MaterializedViewRewritingRelVisitor;
 import org.apache.hadoop.hive.ql.optimizer.calcite.translator.ASTBuilder;
 import org.apache.hadoop.hive.ql.optimizer.calcite.translator.ASTConverter;
+import org.apache.hadoop.hive.ql.optimizer.calcite.translator.HiveImpalaConverter;
 import org.apache.hadoop.hive.ql.optimizer.calcite.translator.HiveOpConverter;
 import org.apache.hadoop.hive.ql.optimizer.calcite.translator.JoinCondTypeCheckProcFactory;
 import org.apache.hadoop.hive.ql.optimizer.calcite.translator.JoinTypeCheckCtx;
@@ -462,6 +463,7 @@ public class CalcitePlanner extends SemanticAnalyzer {
         try {
           // 0. Gen Optimized Plan
           RelNode newPlan = logicalPlan();
+          HiveImpalaConverter sjcSpecial = new HiveImpalaConverter(newPlan);
 
           if (this.conf.getBoolVar(HiveConf.ConfVars.HIVE_CBO_RETPATH_HIVEOP)) {
             if (cboCtx.type == PreCboCtx.Type.VIEW && !materializedView) {

@@ -752,4 +752,9 @@ public class RelOptHiveTable implements RelOptTable {
     return partitionList != null ? partitionList.getKey() : null;
   }
 
+  //XXX: Probably need this
+  public PrunedPartitionList getPartitionList() {
+    return partitionList;
+  }
+
 }

@@ -54,6 +54,11 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>com.github.davidmoten</groupId>
+      <artifactId>flatbuffers-java</artifactId>
+      <version>1.6.0.1</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hive</groupId>
       <artifactId>hive-metastore</artifactId>
       <version>${project.version}</version>

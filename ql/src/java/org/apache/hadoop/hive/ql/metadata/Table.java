@@ -819,7 +819,8 @@ public class Table implements Serializable {
     tTable.setRetention(retention);
   }
 
-  private SerDeInfo getSerdeInfo() {
+  //XXX: CHANGE THIS, just did it to make my life easier.
+  public SerDeInfo getSerdeInfo() {
     return tTable.getSd().getSerdeInfo();
   }
 
