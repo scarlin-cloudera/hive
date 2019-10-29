@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hive.ql.plan.impala;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -36,6 +37,7 @@ import org.apache.impala.thrift.TFileSplitGeneratorSpec;
 import org.apache.impala.thrift.THdfsPartition;
 import org.apache.impala.thrift.THdfsPartitionLocation;
 import org.apache.impala.thrift.TNetworkAddress;
+import org.apache.impala.thrift.TScanRangeLocationList;
 
 import org.apache.hadoop.hive.ql.impalafile.ListMap;
 import org.apache.hadoop.hive.ql.impalafile.FileMetadataLoader;
@@ -74,12 +76,23 @@ public class HdfsPartition {
  
   private final int id_;
 
+  private final ListMap<TNetworkAddress> hostIndexMap_;
+
+  private final List<FileDescriptor> fileDescriptors_;
+
+  private final HdfsScanRangesForPartition scanRangesForPartition_;
+
   private static final Logger LOG = LoggerFactory.getLogger(HdfsPartition.class);
 
   public HdfsPartition(Partition partition, Table table, int id) {
     partition_ = partition;
     table_ = table;
     id_ = id;
+    // This gets filled in with network addresses by the FileMetadataLoader
+    hostIndexMap_  = new ListMap<TNetworkAddress>();
+    // hostIndexMap is empty going into this routine, but file descriptors are retrieved.
+    fileDescriptors_ = getFileDescriptors(hostIndexMap_);
+    scanRangesForPartition_ = new HdfsScanRangesForPartition(this, fileDescriptors_);
   }
 
   public THdfsPartition toThrift() {
@@ -113,25 +126,6 @@ public class HdfsPartition {
     //XXX: re-examine this
     partitionLocation.setSuffix("");
     hdfsPartition.setLocation(partitionLocation);
-    System.out.println("SJC: IN TOTHRIFT FOR PARTITION");
-
-    /////////////////
-    //XXX: REORG THIS
-    ListMap<TNetworkAddress> lm = new ListMap<TNetworkAddress>();
-    try {
-      FileMetadataLoader fmdl = new FileMetadataLoader(new Path(getLocation()), false, Lists.newArrayList(), lm, null);
-      fmdl.load();
-      System.out.println("SJC: NUMBER OF FILES IS " + fmdl.getLoadedFds().size());
-/*
-      for (FileDescriptor fileDesc : fmdl.getLoadedFds()) {
-        generateScanRangeSpecs(fileDesc, 1024*1024); 
-      }
-*/
-    } catch (Exception e) {
-      System.out.println("SJC: CAUGHT EXCEPTION " + e);
-      e.printStackTrace();
-    }
-    /////////////////
 
     return hdfsPartition;
   }
@@ -142,6 +136,14 @@ public class HdfsPartition {
 
   public String getLocation() {
     return partition_.getTPartition().getSd().getLocation();
+  }
+
+  public ListMap<TNetworkAddress> getHostIndexMap() {
+    return hostIndexMap_;
+  }
+
+  public List<TScanRangeLocationList> getScanLocationLists(ListMap<TNetworkAddress> hostIndexes) {
+    return scanRangesForPartition_.toThrift(hostIndexes);
   }
   
   //XXX: CLEANUP
@@ -188,62 +190,18 @@ public class HdfsPartition {
     return null;
   }
 
-/*
-  private Pair<Boolean, Long> transformBlocksToScanRanges(FileDescriptor fileDesc) {
-    //XXX: check for missing disk ids
-    Preconditions.checkArgument(fileDesc.getNumFileBlocks() > 0);
-    for (int i = 0; i < fileDesc.getNumFileBlocks(); ++i) {
-      FbFileBlock block = fileDesc.getFbFileBlock(i);
-      int replicaHostCount = FileBlock.getNumReplicaHosts(block);
-      if (replicaHostCount == 0) {
-        // we didn't get locations for this block; for now, just ignore the block
-        // TODO: do something meaningful with that
-        continue;
-      }
-      // Collect the network address and volume ID of all replicas of this block.
-      List<TScanRangeLocation> locations = new ArrayList<>();
-      for (int j = 0; j < replicaHostCount; ++j) {
-        TScanRangeLocation location = new TScanRangeLocation();
-        // Translate from the host index (local to the HdfsTable) to network address.
-        int replicaHostIdx = FileBlock.getReplicaHostIdx(block, j);
-        //TODO
-        TNetworkAddress networkAddress =
-            partition.getTable().getHostIndex().getEntry(replicaHostIdx);
-        Preconditions.checkNotNull(networkAddress);
-        // Translate from network address to the global (to this request) host index.
-        Integer globalHostIdx = analyzer.getHostIndex().getIndex(networkAddress);
-        location.setHost_idx(globalHostIdx);
-
-        location.setVolume_id(FileBlock.getDiskId(block, j));
-        location.setIs_cached(FileBlock.isReplicaCached(block, j));
-        locations.add(location);
-      }
-
-      // create scan ranges, taking into account maxScanRangeLength
-      long currentOffset = FileBlock.getOffset(block);
-      long remainingLength = FileBlock.getLength(block);
-      while (remainingLength > 0) {
-        long currentLength = remainingLength;
-        if (scanRangeBytesLimit > 0 && remainingLength > scanRangeBytesLimit) {
-          currentLength = scanRangeBytesLimit;
-        }
-        TScanRange scanRange = new TScanRange();
-        scanRange.setHdfs_file_split(new THdfsFileSplit(fileDesc.getRelativePath(),
-            currentOffset, currentLength, partition.getId(), fileDesc.getFileLength(),
-            fileDesc.getFileCompression().toThrift(), fileDesc.getModificationTime(),
-            fileDesc.getIsEc(), partition.getLocation().hashCode()));
-        TScanRangeLocationList scanRangeLocations = new TScanRangeLocationList();
-        scanRangeLocations.scan_range = scanRange;
-        scanRangeLocations.locations = locations;
-        scanRangeSpecs_.addToConcrete_ranges(scanRangeLocations);
-        largestScanRangeBytes_ = Math.max(largestScanRangeBytes_, currentLength);
-        fileMaxScanRangeBytes = Math.max(fileMaxScanRangeBytes, currentLength);
-        remainingLength -= currentLength;
-        currentOffset += currentLength;
-      }
+  private List<FileDescriptor> getFileDescriptors(ListMap<TNetworkAddress> hostIndexMap) {
+    List<FileDescriptor> fileDescriptors = Lists.newArrayList();
+    try {
+      // hostIndexMap is empty going into this routine, but filled when load is complete.
+      FileMetadataLoader fmdl = new FileMetadataLoader(new Path(getLocation()), false, Lists.newArrayList(), hostIndexMap, null);
+      fmdl.load();
+      fileDescriptors = fmdl.getLoadedFds();
+    } catch (Exception e) {
+      //XXX: need to figure out what to do here, but this is all moving anyway.
+      System.out.println("SJC: CAUGHT EXCEPTION " + e);
+      e.printStackTrace();
     }
-
-    return new Pair<Boolean, Long>(fileDescMissingDiskIds, fileMaxScanRangeBytes);
+    return ImmutableList.<FileDescriptor>builder().addAll(fileDescriptors).build();
   }
-*/
 }

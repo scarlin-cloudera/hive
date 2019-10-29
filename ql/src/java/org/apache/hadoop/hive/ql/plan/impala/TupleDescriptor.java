@@ -25,6 +25,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveTableScan;
 
+import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TTupleDescriptor;
 
 import com.google.common.base.Preconditions;
@@ -65,6 +66,10 @@ public class TupleDescriptor {
 
   public TableDescriptor getTableDescriptor() {
     return tableDescriptor_;
+  }
+
+  public List<TColumn> getTColumns() {
+    return tableDescriptor_.getTColumns();
   }
 
   public List<SlotDescriptor> getSlotDescriptors() {

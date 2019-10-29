@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 
+import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TColumnDescriptor;
 import org.apache.impala.thrift.TColumnType;
 import org.apache.impala.thrift.TTypeNode;
@@ -45,8 +46,11 @@ public class ColumnDescriptor {
     
   }
 
-  // TODO(todd): move to a default method in FeTable in Java8
   public TColumnDescriptor toThrift() {
     return new TColumnDescriptor(name_, type_.getTColumnType());
+  }  
+
+  public TColumn getTColumn() {
+    return new TColumn(name_, type_.getTColumnType());
   }  
 }

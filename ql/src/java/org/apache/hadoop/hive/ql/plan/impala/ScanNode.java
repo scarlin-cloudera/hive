@@ -22,6 +22,10 @@ import java.util.List;
 
 import org.apache.calcite.rel.core.TableScan;
 
+import org.apache.hadoop.hive.ql.impalafile.ListMap;
+import org.apache.impala.thrift.TNetworkAddress;
+import org.apache.impala.thrift.TScanRangeSpec;
+
 import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
@@ -37,5 +41,9 @@ public abstract class ScanNode extends PlanNode {
 
   public TupleDescriptor getTupleDesc() {
     return tuple_;
+  }
+
+  public TScanRangeSpec getScanRangeSpec(ListMap<TNetworkAddress> hostIndexes) {
+    return tuple_.getTableDescriptor().getScanRangeSpec(hostIndexes);
   }
 }

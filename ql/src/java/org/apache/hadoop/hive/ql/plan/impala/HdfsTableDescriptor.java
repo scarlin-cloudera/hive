@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
+import org.apache.hadoop.hive.ql.impalafile.ListMap;
 import org.apache.hadoop.hive.ql.optimizer.calcite.RelOptHiveTable;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveTableScan;
 import org.apache.hadoop.hive.ql.metadata.Partition;
@@ -37,6 +38,9 @@ import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.impala.thrift.THdfsPartition;
 import org.apache.impala.thrift.THdfsPartitionLocation;
 import org.apache.impala.thrift.THdfsTable;
+import org.apache.impala.thrift.TNetworkAddress;
+import org.apache.impala.thrift.TScanRangeLocationList;
+import org.apache.impala.thrift.TScanRangeSpec;
 import org.apache.impala.thrift.TTableDescriptor;
 import org.apache.impala.thrift.TTableType;
 
@@ -166,5 +170,26 @@ public class HdfsTableDescriptor extends TableDescriptor {
     hdfsTable.setPartitions(idToPartition);
 
     return hdfsTable;
+  }
+
+  @Override
+  public List<ListMap<TNetworkAddress>> getAllHostIndexes() {
+    List<ListMap<TNetworkAddress>> listmaps = Lists.newArrayList();
+    for (HdfsPartition partition : partitions_) {
+      listmaps.add(partition.getHostIndexMap());
+    }  
+    return listmaps;
+  }
+
+  @Override
+  public TScanRangeSpec getScanRangeSpec(ListMap<TNetworkAddress> hostIndexes) {
+    TScanRangeSpec scanRangeSpec = new TScanRangeSpec();
+    for (HdfsPartition partition : partitions_) {
+      List<TScanRangeLocationList> scanLocationLists = partition.getScanLocationLists(hostIndexes);
+      for (TScanRangeLocationList scanLocationList : scanLocationLists) {
+        scanRangeSpec.addToConcrete_ranges(scanLocationList);
+      }
+    }
+    return scanRangeSpec;
   }
 }

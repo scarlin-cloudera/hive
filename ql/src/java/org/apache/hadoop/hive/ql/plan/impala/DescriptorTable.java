@@ -50,4 +50,8 @@ public class DescriptorTable {
     }
     return descriptorTable;
   }
+
+  public List<TableDescriptor> getTableDescriptors() {
+    return tableDescriptors_;
+  }
 }

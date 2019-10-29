@@ -22,8 +22,12 @@ import java.util.List;
 
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.hadoop.hive.ql.impalafile.ListMap;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveTableScan;
+import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TColumnDescriptor;
+import org.apache.impala.thrift.TNetworkAddress;
+import org.apache.impala.thrift.TScanRangeSpec;
 import org.apache.impala.thrift.TTableDescriptor;
 
 
@@ -71,6 +75,14 @@ public abstract class TableDescriptor {
     return tableId_;
   }
 
+  public List<TColumn> getTColumns() {
+    List<TColumn> columns = Lists.newArrayList();
+    for (ColumnDescriptor column : columnDescriptors_) {
+      columns.add(column.getTColumn());
+    }
+    return columns;
+  }
+
   protected int getNumClusteringCols() {
     return numClusteringCols_;
   }
@@ -85,6 +97,10 @@ public abstract class TableDescriptor {
 
   abstract public TTableDescriptor toThrift();
 
+  abstract public List<ListMap<TNetworkAddress>> getAllHostIndexes();
+
+  abstract public TScanRangeSpec getScanRangeSpec(ListMap<TNetworkAddress> hostIndexes);
+
   protected List<TColumnDescriptor> getTColumnDescriptors() {
     List<TColumnDescriptor> columns = Lists.newArrayList();
     for (ColumnDescriptor column : columnDescriptors_) {
@@ -92,4 +108,5 @@ public abstract class TableDescriptor {
     }
     return columns;
   }
+
 }

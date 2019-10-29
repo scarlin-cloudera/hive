@@ -28,6 +28,7 @@ import org.apache.hadoop.hive.ql.plan.impala.DescriptorTable;
 import org.apache.hadoop.hive.ql.plan.impala.HdfsScanNode;
 import org.apache.hadoop.hive.ql.plan.impala.IdGenerator;
 import org.apache.hadoop.hive.ql.plan.impala.PlanNode;
+import org.apache.hadoop.hive.ql.plan.impala.ScanRangeLocations;
 import org.apache.hadoop.hive.ql.plan.impala.SlotDescriptor;
 import org.apache.hadoop.hive.ql.plan.impala.TableDescriptor;
 import org.apache.hadoop.hive.ql.plan.impala.TupleDescriptor;
@@ -47,21 +48,31 @@ public class HiveImpalaConverter {
 
   private final DescriptorTable descriptorTable_;
 
+  private final ScanRangeLocations scanRangeLocations_;
+
   public HiveImpalaConverter(RelNode root) {
     try {
-      System.out.println("SJC: CP1");
       IdGenerator idGen = new IdGenerator();
-      System.out.println("SJC: CP2");
       rootPlanNode_ = dispatch(root, Lists.newArrayList(), idGen);
-      System.out.println("SJC: CP3");
       descriptorTable_ = createDescriptorTable(rootPlanNode_);
-      System.out.println("SJC: " + descriptorTable_.toThrift());
+      scanRangeLocations_  = createScanRangeLocations(rootPlanNode_);
     } catch (Exception e) {
       e.printStackTrace();
       throw e;
     }
   }
 
+  public PlanNode getRootPlanNode() {
+    return rootPlanNode_;
+  }
+
+  public DescriptorTable getDescriptorTable() {
+    return descriptorTable_;
+  }
+
+  public ScanRangeLocations getScanRangeLocations() {
+    return scanRangeLocations_;
+  }
   private PlanNode dispatch(RelNode rn, List<RelDataTypeField> fields, IdGenerator idGen) {
     if (rn instanceof HiveTableScan) {
       return visitTableScan((HiveTableScan) rn, fields, idGen);
@@ -88,6 +99,10 @@ public class HiveImpalaConverter {
     List<SlotDescriptor> slotDescriptors = rootPlanNode.gatherAllSlotDescriptors(); 
     List<TableDescriptor> tableDescriptors = rootPlanNode.gatherAllTableDescriptors(); 
     return new DescriptorTable(tupleDescriptors, slotDescriptors, tableDescriptors);
+  }
+
+  private ScanRangeLocations createScanRangeLocations(PlanNode rootPlanNode) {
+    return new ScanRangeLocations(rootPlanNode.gatherAllScanNodes());
   }
 }
 

@@ -20,10 +20,12 @@ package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.List;
 
+import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TExecNodePhase;
 import org.apache.impala.thrift.TExecStats;
 import org.apache.impala.thrift.TPlan;
 import org.apache.impala.thrift.TPlanNode;
+import org.apache.impala.thrift.TResultSetMetadata;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -116,6 +118,16 @@ public abstract class PlanNode {
     return planNode;
   }
 
+  public TResultSetMetadata getTResultSetMetadata() {
+    TResultSetMetadata resultSetMetadata = new TResultSetMetadata();
+    for (TupleDescriptor tuple : tuples_) {
+      for (TColumn column : tuple.getTColumns()) {
+        resultSetMetadata.addToColumns(column);
+      }
+    }
+    return resultSetMetadata;
+  }
+
   public List<TupleDescriptor> getTupleDescriptors() {
     return tuples_;
   }
@@ -132,6 +144,15 @@ public abstract class PlanNode {
       tableDescriptors.add(tuple.getTableDescriptor());
     }
     return tableDescriptors;
+  }
+
+  public List<ScanNode> gatherAllScanNodes() {
+    //XXX: no children yet, can just return this if it is a scan node 
+    List<ScanNode> scanNodes = Lists.newArrayList();
+    if (this instanceof ScanNode) {
+      scanNodes.add((ScanNode) this);
+    }
+    return scanNodes;
   }
 
   public List<SlotDescriptor> gatherAllSlotDescriptors() {
@@ -156,7 +177,7 @@ public abstract class PlanNode {
 
   //XXX: didn't populate stats yet
   public boolean isTableMissingStats() {
-    return true;
+    return false;
   }
 
   public boolean hasCorruptTableStats() {
