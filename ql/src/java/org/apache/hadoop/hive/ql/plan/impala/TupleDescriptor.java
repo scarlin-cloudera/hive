@@ -69,7 +69,11 @@ public class TupleDescriptor {
   }
 
   public List<TColumn> getTColumns() {
-    return tableDescriptor_.getTColumns();
+    List<TColumn> columns = Lists.newArrayList();
+    for (SlotDescriptor slotDesc : slotDescriptors_) {
+      columns.add(slotDesc.getTColumn());
+    }
+    return columns;
   }
 
   public List<SlotDescriptor> getSlotDescriptors() {

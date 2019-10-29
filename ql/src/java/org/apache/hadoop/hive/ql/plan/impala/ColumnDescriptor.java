@@ -49,8 +49,4 @@ public class ColumnDescriptor {
   public TColumnDescriptor toThrift() {
     return new TColumnDescriptor(name_, type_.getTColumnType());
   }  
-
-  public TColumn getTColumn() {
-    return new TColumn(name_, type_.getTColumnType());
-  }  
 }

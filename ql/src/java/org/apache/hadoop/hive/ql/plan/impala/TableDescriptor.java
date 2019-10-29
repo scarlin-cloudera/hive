@@ -75,14 +75,6 @@ public abstract class TableDescriptor {
     return tableId_;
   }
 
-  public List<TColumn> getTColumns() {
-    List<TColumn> columns = Lists.newArrayList();
-    for (ColumnDescriptor column : columnDescriptors_) {
-      columns.add(column.getTColumn());
-    }
-    return columns;
-  }
-
   protected int getNumClusteringCols() {
     return numClusteringCols_;
   }

@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.ql.plan.impala;
 import java.util.List;
 
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TColumnType;
 import org.apache.impala.thrift.TSlotDescriptor;
 
@@ -69,5 +70,9 @@ public class SlotDescriptor {
     slot.setNullIndicatorBit(nullIndicatorBit_);
     slot.setSlotIdx(slotIdx_);
     return slot;
+  }  
+
+  public TColumn getTColumn() {
+    return column_.getTColumn();
   }  
 }

@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.ql.plan.impala;
 import java.util.List;
 
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TColumnType;
 import org.apache.impala.thrift.TSlotDescriptor;
 
@@ -52,10 +53,15 @@ public class Column implements Comparable<Column> {
       // order desc
       return Integer.compare(getSlotSize(), other.getSlotSize());
     }
-    return name_.toString().compareTo(other.name_.toString());
+    return name_.compareTo(other.name_);
   }
 
   public int getSlotSize() {
     return type_.getSlotSize();
   }
+
+  public TColumn getTColumn() {
+    return new TColumn(name_, type_.getTColumnType());
+  }  
+
 }
