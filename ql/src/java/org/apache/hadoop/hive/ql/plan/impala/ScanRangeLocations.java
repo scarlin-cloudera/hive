@@ -47,6 +47,14 @@ public class ScanRangeLocations {
     return scanNode.getScanRangeSpec(hostMapIndex_);
   }
 
+  public List<TNetworkAddress> getHostIndexes() {
+    List<TNetworkAddress> networkAddresses = Lists.newArrayList();
+    for (int i = 0; i < hostMapIndex_.size(); ++i) {
+      networkAddresses.add(hostMapIndex_.getEntry(i));
+    }
+    return networkAddresses;
+  }
+
   private ListMap<TNetworkAddress> getGlobalHostMapIndexes(List<ScanNode> scanNodes) {
     ListMap<TNetworkAddress> globalHostIndex = new ListMap<TNetworkAddress>();
     List<ListMap<TNetworkAddress>> allHostIndexes = Lists.newArrayList();
