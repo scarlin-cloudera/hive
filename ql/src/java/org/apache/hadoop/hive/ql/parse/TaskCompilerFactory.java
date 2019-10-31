@@ -36,10 +36,13 @@ public class TaskCompilerFactory {
    * into executable units.
    */
   public static TaskCompiler getCompiler(HiveConf conf, ParseContext parseContext) {
-    if (HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).equals("tez")) {
+    String execEngine = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE);
+    if (execEngine.equals("tez")) {
       return new TezCompiler();
-    } else if (HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).equals("spark")) {
+    } else if (execEngine.equals("spark")) {
       return new SparkCompiler();
+    } else if (execEngine.equals("impala")) {
+      return new ImpalaCompiler();
     } else {
       return new MapReduceCompiler();
     }
