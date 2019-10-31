@@ -118,8 +118,8 @@ public class HdfsTableDescriptor extends TableDescriptor {
 
   private static final Logger LOG = LoggerFactory.getLogger(HdfsTableDescriptor.class);
 
-  public HdfsTableDescriptor(HiveTableScan tableScan, IdGenerator idGen) {
-    super(tableScan, idGen);
+  public HdfsTableDescriptor(HiveTableScan tableScan, TableId tableId) {
+    super(tableScan, tableId);
 
     RelOptHiveTable hiveTable = (RelOptHiveTable) tableScan.getTable();
     Set<Partition> partitions = hiveTable.getPartitionList().getPartitions();
@@ -168,6 +168,9 @@ public class HdfsTableDescriptor extends TableDescriptor {
       hdfsTable.addToPartition_prefixes(partition.getLocation());
     }
     hdfsTable.setPartitions(idToPartition);
+
+    assert partitions_.size() > 0;
+    hdfsTable.setPrototype_partition(partitions_.get(0).toThriftPrototype());
 
     return hdfsTable;
   }

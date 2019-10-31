@@ -19,23 +19,30 @@
 package org.apache.hadoop.hive.ql.optimizer.calcite.translator;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rex.RexNode;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveProject;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveTableScan;
 import org.apache.hadoop.hive.ql.plan.impala.DescriptorTable;
 import org.apache.hadoop.hive.ql.plan.impala.HdfsScanNode;
 import org.apache.hadoop.hive.ql.plan.impala.IdGenerator;
+import org.apache.hadoop.hive.ql.plan.impala.IdGenType;
+import org.apache.hadoop.hive.ql.plan.impala.PlanId;
 import org.apache.hadoop.hive.ql.plan.impala.PlanNode;
 import org.apache.hadoop.hive.ql.plan.impala.ScanRangeLocations;
 import org.apache.hadoop.hive.ql.plan.impala.SlotDescriptor;
+import org.apache.hadoop.hive.ql.plan.impala.SlotId;
 import org.apache.hadoop.hive.ql.plan.impala.TableDescriptor;
+import org.apache.hadoop.hive.ql.plan.impala.TableId;
 import org.apache.hadoop.hive.ql.plan.impala.TupleDescriptor;
+import org.apache.hadoop.hive.ql.plan.impala.TupleId;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,8 +59,8 @@ public class HiveImpalaConverter {
 
   public HiveImpalaConverter(RelNode root) {
     try {
-      IdGenerator idGen = new IdGenerator();
-      rootPlanNode_ = dispatch(root, Lists.newArrayList(), idGen);
+      Map<IdGenType, IdGenerator<?>> idGenerators = createIdGenerators();
+      rootPlanNode_ = dispatch(root, Lists.newArrayList(), idGenerators);
       descriptorTable_ = createDescriptorTable(rootPlanNode_);
       scanRangeLocations_  = createScanRangeLocations(rootPlanNode_);
     } catch (Exception e) {
@@ -73,25 +80,31 @@ public class HiveImpalaConverter {
   public ScanRangeLocations getScanRangeLocations() {
     return scanRangeLocations_;
   }
-  private PlanNode dispatch(RelNode rn, List<RelDataTypeField> fields, IdGenerator idGen) {
+  private PlanNode dispatch(RelNode rn, List<RexNode> fields,
+      Map<IdGenType, IdGenerator<?>> idGenerators) {
     if (rn instanceof HiveTableScan) {
-      return visitTableScan((HiveTableScan) rn, fields, idGen);
+      return visitTableScan((HiveTableScan) rn, fields, idGenerators);
     } else if (rn instanceof HiveProject) {
-      return visitProject((HiveProject) rn, fields, idGen);
+      return visitProject((HiveProject) rn, fields, idGenerators);
     }
     LOG.error(rn.getClass().getCanonicalName() + "operator translation not supported"
         + " yet in return path.");
     return null;
   }
 
-  private PlanNode visitTableScan(HiveTableScan scanRel, List<RelDataTypeField> fields, IdGenerator idGen) {
+  private PlanNode visitTableScan(HiveTableScan scanRel, List<RexNode> fields,
+      Map<IdGenType, IdGenerator<?>> idGenerators) {
+    //XXX: Probably overkill having a type param, copied it from impala.
+    IdGenerator<TupleId> tupleIdGen = (IdGenerator<TupleId>) idGenerators.get(IdGenType.TUPLE);
+    IdGenerator<PlanId> planIdGen = (IdGenerator<PlanId>) idGenerators.get(IdGenType.PLAN);
     //XXX: only support hdfs right now
-    return new HdfsScanNode(new TupleDescriptor(scanRel, fields, idGen), idGen);
+    return new HdfsScanNode(new TupleDescriptor(scanRel, fields, tupleIdGen.getNextId(), idGenerators), planIdGen.getNextId());
   }
 
-  private PlanNode visitProject(HiveProject project, List<RelDataTypeField> fields, IdGenerator idGen) {
+  private PlanNode visitProject(HiveProject project, List<RexNode> fields,
+      Map<IdGenType, IdGenerator<?>> idGenerators) {
     //XXX: temporary while we are only using select * from tbl
-    return dispatch(project.getInputs().get(0), project.getRowType().getFieldList(), idGen);
+    return dispatch(project.getInputs().get(0), project.getProjects(), idGenerators);
   }
 
   private DescriptorTable createDescriptorTable(PlanNode rootPlanNode) {
@@ -103,6 +116,15 @@ public class HiveImpalaConverter {
 
   private ScanRangeLocations createScanRangeLocations(PlanNode rootPlanNode) {
     return new ScanRangeLocations(rootPlanNode.gatherAllScanNodes());
+  }
+
+  private Map<IdGenType, IdGenerator<?>> createIdGenerators() {
+    Map<IdGenType, IdGenerator<?>> idGenerators = Maps.newHashMap();
+    idGenerators.put(IdGenType.SLOT, SlotId.createGenerator());
+    idGenerators.put(IdGenType.PLAN, PlanId.createGenerator());
+    idGenerators.put(IdGenType.TUPLE, TupleId.createGenerator());
+    idGenerators.put(IdGenType.TABLE, TableId.createGenerator());
+    return idGenerators;
   }
 }
 

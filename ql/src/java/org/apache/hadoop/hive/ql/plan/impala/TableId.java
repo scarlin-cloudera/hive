@@ -17,18 +17,19 @@
 
 package org.apache.hadoop.hive.ql.plan.impala;
 
-/**
- * Generator of consecutively numbered integers to be used as ids by subclasses of Id.
- * Subclasses of Id should be able to create a generator for their Id type.
- */
-public abstract class IdGenerator<IdType extends Id<IdType>> {
-  protected int nextId_;
-  public IdGenerator(int startId) {
-    nextId_ = startId;
+public class TableId extends Id<TableId> {
+  // Construction only allowed via an IdGenerator.
+  public static final int TABLE_SINK_ID = 0;
+  protected TableId(int id) {
+    super(id);
   }
-  public IdGenerator() {
-    this(0);
+
+  public static IdGenerator<TableId> createGenerator() {
+    return new IdGenerator<TableId>(1) {
+      @Override
+      public TableId getNextId() { return new TableId(nextId_++); }
+      @Override
+      public TableId getMaxId() { return new TableId(nextId_ - 1); }
+    };
   }
-  public abstract IdType getNextId();
-  public abstract IdType getMaxId();
 }

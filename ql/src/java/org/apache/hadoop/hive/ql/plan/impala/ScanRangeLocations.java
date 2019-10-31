@@ -61,8 +61,11 @@ public class ScanRangeLocations {
     for (ScanNode scanNode : scanNodes) {
       allHostIndexes.addAll(scanNode.getTupleDesc().getTableDescriptor().getAllHostIndexes());
     }
+    System.out.println("SJC: ALLHOST SIZE = " + allHostIndexes.size());
     for (ListMap<TNetworkAddress> listmap : allHostIndexes) {
+      System.out.println("SJC: LISTMAP SIZE = " + listmap.size());
       for (int i = 0; i < listmap.size(); ++i) {
+        System.out.println("SJC: LISTMAP ENTRY = " + listmap.getEntry(i));
         //XXX: does the add, but let's rename method 'getIndex' to something better
         globalHostIndex.getIndex(listmap.getEntry(i));
       }

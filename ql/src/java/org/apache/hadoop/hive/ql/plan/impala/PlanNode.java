@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 public abstract class PlanNode {
   protected abstract TPlanNode createDerivedTPlanNode();
 
-  private final int planId_;
+  private final PlanId id_;
 
   private final String displayName_;
 
@@ -49,15 +49,15 @@ public abstract class PlanNode {
 
   private final ImmutableList<PipelineMembership> pipelines_;
 
-  public PlanNode(List<PlanNode> inputs, List<TupleDescriptor> tuples, IdGenerator idGen, String displayName) {
-    planId_ = idGen.getNextId();
+  public PlanNode(List<PlanNode> inputs, List<TupleDescriptor> tuples, PlanId planId, String displayName) {
+    id_ = planId;
     inputs_ = new ImmutableList.Builder<PlanNode>().addAll(inputs).build();
     displayName_ = displayName;
     tuples_ = new ImmutableList.Builder<TupleDescriptor>().addAll(tuples).build();
     nodeResourceProfile_ = new ResourceProfile(true, 1024*1024, 1024*1024, 1024*1024*8, -1, 1024*1024*8, 1);
     //XXX: when we have children, this will need to change
     pipelines_ = new ImmutableList.Builder<PipelineMembership>().add(
-        new PipelineMembership(planId_, 0, TExecNodePhase.GETNEXT)).build();
+        new PipelineMembership(id_.asInt(), 0, TExecNodePhase.GETNEXT)).build();
   }
 
   // Convert this plan node, including all children, to its Thrift representation.
@@ -79,7 +79,7 @@ public abstract class PlanNode {
 
   public TPlanNode getTPlanNode() {
     TPlanNode planNode = createDerivedTPlanNode();
-    planNode.setNode_id(planId_);
+    planNode.setNode_id(id_.asInt());
     planNode.setLimit(0);
 
     TExecStats estimatedStats = new TExecStats();
@@ -165,7 +165,7 @@ public abstract class PlanNode {
   }
 
   private String getDisplayLabel() {
-    return String.format("%d:%s", planId_, displayName_);
+    return String.format("%s:%s", id_.toString(), displayName_);
   } 
       
   /** 

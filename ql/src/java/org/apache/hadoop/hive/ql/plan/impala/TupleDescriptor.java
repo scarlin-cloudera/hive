@@ -20,9 +20,11 @@ package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexNode;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveTableScan;
 
 import org.apache.impala.thrift.TColumn;
@@ -37,27 +39,33 @@ import org.slf4j.LoggerFactory;
 
 public class TupleDescriptor {
 
-  private final Integer tupleId_;
+  private final TupleId tupleId_;
   private static final Logger LOG = LoggerFactory.getLogger(TupleDescriptor.class);
   //TODO:
-  private final int byteSize_ = -1;
+  private final int byteSize_;
   //TODO:
-  private final int numNullBytes_ = -1;
+  private final int numNullBytes_;
   private final TableDescriptor tableDescriptor_;
   private final List<SlotDescriptor> slotDescriptors_;
 
   //TODO: 
   private final List<Integer> tuplePaths_ = ImmutableList.of();
 
-  public TupleDescriptor(HiveTableScan tableScan, List<RelDataTypeField> fields, IdGenerator idGen) {
-    tupleId_ = idGen.getNextId();
-    tableDescriptor_ = new HdfsTableDescriptor(tableScan, idGen);
-    slotDescriptors_ = getSlotDescriptors(fields, tupleId_, idGen);
+  public TupleDescriptor(HiveTableScan tableScan, List<RexNode> fields, TupleId id,
+      Map<IdGenType, IdGenerator<?>> idGenerators) {
+    IdGenerator<TableId> tableIdGen = (IdGenerator<TableId>) idGenerators.get(IdGenType.TABLE);
+    IdGenerator<SlotId> slotIdGen = (IdGenerator<SlotId>) idGenerators.get(IdGenType.SLOT);
+    tupleId_ = id;
+    tableDescriptor_ = new HdfsTableDescriptor(tableScan, tableIdGen.getNextId());
+    List<Column> columns = createColumns(fields);
+    byteSize_ = getTupleSize(columns);
+    numNullBytes_ = (columns.size() - 1) / 8 + 1;
+    slotDescriptors_ = createSlotDescriptors(columns, slotIdGen);
   }
 
   public TTupleDescriptor toThrift() {
     TTupleDescriptor ttupleDesc =
-        new TTupleDescriptor(tupleId_, byteSize_, numNullBytes_);
+        new TTupleDescriptor(tupleId_.asInt(), byteSize_ + numNullBytes_, numNullBytes_);
     ttupleDesc.setTableId(tableDescriptor_.getTableId());
 //TODO:    ttupleDesc.setTuplePath(path_.getAbsolutePath());
     ttupleDesc.setTuplePath(tuplePaths_);
@@ -89,24 +97,40 @@ public class TupleDescriptor {
   }
 
   public int getTupleId() {
-    return tupleId_;
+    return tupleId_.asInt();
   }
 
-  private List<SlotDescriptor> getSlotDescriptors(List<RelDataTypeField> fields, int tupleId, IdGenerator idGen) {
-    List<Column> columns = Lists.newArrayList();
-    for (RelDataTypeField field : fields) {
-      columns.add(new Column(field));
-    }
-    Collections.sort(columns);
+  private List<SlotDescriptor> createSlotDescriptors(List<Column> columns, IdGenerator<SlotId> slotIdGen) {
     List<SlotDescriptor> slotDescriptors = Lists.newArrayList();
     int slotIdx = 0;
     int slotOffset = 0;
     for (Column column : columns) {
-      slotDescriptors.add(new SlotDescriptor(column, tupleId, slotIdx, slotIdx, slotOffset, idGen));
+      int nullIdx = byteSize_ + slotIdx / 8;
+      slotDescriptors.add(new SlotDescriptor(column, tupleId_.asInt(), slotIdx, nullIdx, slotOffset, slotIdGen.getNextId()));
       slotIdx++;
       slotOffset += column.getSlotSize();
     }
     return slotDescriptors;
   }
 
+  private List<Column> createColumns(List<RexNode> fields) {
+    List<Column> columns = Lists.newArrayList();
+    for (RexNode field : fields) {
+      //XXX: This will not be true once we have expressions.
+      assert field instanceof RexInputRef;
+      RexInputRef inputRef = (RexInputRef) field;
+      System.out.println("SJC: PRE SORT, FIELD = " + inputRef.getName() + ", " + field.getType().getSqlTypeName());
+      columns.add(new SlotRefColumn(inputRef));
+    }
+    Collections.sort(columns);
+    return columns;
+  }
+
+  private int getTupleSize(List<Column> columns) {
+    int tupleSize = 0;
+    for (Column column : columns) {
+      tupleSize += column.getSlotSize();
+    }
+    return tupleSize;
+  }
 }

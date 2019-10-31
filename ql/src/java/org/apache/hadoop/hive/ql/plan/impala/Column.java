@@ -20,7 +20,7 @@ package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.List;
 
-import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rex.RexNode;
 import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TColumnType;
 import org.apache.impala.thrift.TSlotDescriptor;
@@ -30,7 +30,9 @@ import com.google.common.collect.ImmutableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Column implements Comparable<Column> {
+public abstract class Column implements Comparable<Column> {
+
+  private final RexNode column_;
 
   private final String name_;
 
@@ -38,9 +40,14 @@ public class Column implements Comparable<Column> {
 
   private static final Logger LOG = LoggerFactory.getLogger(Column.class);
 
-  public Column(RelDataTypeField column) {
-    name_ = column.getName();
+  public Column(RexNode column, String name) {
+    column_ = column;
+    name_ = name != null ? name : toString();
     type_ = new ColumnType(column.getType().getSqlTypeName());
+  }
+
+  public Column(RexNode column) {
+    this(column, null);
   }
 
   public ColumnType getType() {
@@ -51,7 +58,7 @@ public class Column implements Comparable<Column> {
   public int compareTo(Column other) {
     if (getSlotSize() != other.getSlotSize()) {
       // order desc
-      return Integer.compare(getSlotSize(), other.getSlotSize());
+      return Integer.compare(other.getSlotSize(), getSlotSize());
     }
     return name_.compareTo(other.name_);
   }
@@ -64,4 +71,5 @@ public class Column implements Comparable<Column> {
     return new TColumn(name_, type_.getTColumnType());
   }  
 
+  public abstract List<Integer> getMaterializedPath();
 }

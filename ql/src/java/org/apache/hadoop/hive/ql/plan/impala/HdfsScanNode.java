@@ -32,8 +32,8 @@ import org.slf4j.LoggerFactory;
 public class HdfsScanNode extends ScanNode {
   private final static Logger LOG = LoggerFactory.getLogger(HdfsScanNode.class);
 
-  public HdfsScanNode(TupleDescriptor tuple, IdGenerator idGen) {
-    super(tuple, idGen);
+  public HdfsScanNode(TupleDescriptor tuple, PlanId id) {
+    super(tuple, id);
   }
 
   @Override

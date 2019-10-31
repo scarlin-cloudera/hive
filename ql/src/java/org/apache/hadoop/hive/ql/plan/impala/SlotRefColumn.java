@@ -20,30 +20,34 @@ package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.List;
 
-import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexNode;
+import org.apache.impala.thrift.TColumn;
+import org.apache.impala.thrift.TColumnType;
+import org.apache.impala.thrift.TSlotDescriptor;
 
-import org.apache.hadoop.hive.ql.impalafile.ListMap;
-import org.apache.impala.thrift.TNetworkAddress;
-import org.apache.impala.thrift.TScanRangeSpec;
-
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class ScanNode extends PlanNode {
+public class SlotRefColumn extends Column implements Comparable<Column> {
 
-  private final TupleDescriptor tuple_; 
-  protected ScanNode(TupleDescriptor tuple, PlanId id) {
-    super(Lists.newArrayList(), Lists.newArrayList(tuple), id, tuple.getTableName());
-    tuple_ = tuple;
+  private final RexInputRef inputRef_;
+
+  private static final Logger LOG = LoggerFactory.getLogger(SlotRefColumn.class);
+
+  public SlotRefColumn(RexInputRef inputRef) {
+    super(inputRef, inputRef.getName());
+    inputRef_ = inputRef;
+  }
+ 
+  public int getIndex() {
+    return inputRef_.getIndex();
   }
 
-  public TupleDescriptor getTupleDesc() {
-    return tuple_;
-  }
-
-  public TScanRangeSpec getScanRangeSpec(ListMap<TNetworkAddress> hostIndexes) {
-    return tuple_.getTableDescriptor().getScanRangeSpec(hostIndexes);
+  @Override
+  public List<Integer> getMaterializedPath() {
+    return ImmutableList.of(getIndex());
   }
 }

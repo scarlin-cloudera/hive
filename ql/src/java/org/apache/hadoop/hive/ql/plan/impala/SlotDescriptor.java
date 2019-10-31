@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 
 public class SlotDescriptor {
 
-  private final int slotId_;
+  private final SlotId slotId_;
 
   private final int tupleId_;
  
@@ -48,23 +48,23 @@ public class SlotDescriptor {
 
   private static final Logger LOG = LoggerFactory.getLogger(SlotDescriptor.class);
 
-  public SlotDescriptor(Column column, int tupleId, int slotIdx, int nullIdx, int byteOffset, IdGenerator idGen) {
+  public SlotDescriptor(Column column, int tupleId, int slotIdx, int nullIdx, int byteOffset, SlotId id) {
     column_ = column;
-    slotId_ = idGen.getNextId();
+    slotId_ = id;
     tupleId_ = tupleId;
     byteOffset_ = byteOffset;
-    nullIndicatorByte_ = nullIdx / 8;
-    nullIndicatorBit_ = nullIdx % 8;
+    nullIndicatorByte_ = nullIdx;
+    nullIndicatorBit_ = slotIdx % 8;
     slotIdx_ = slotIdx;
     //XXX: materializedPath is hardcoded for now.
   }
 
   public TSlotDescriptor toThrift() {
     TSlotDescriptor slot = new TSlotDescriptor();
-    slot.setId(slotId_);
+    slot.setId(slotId_.asInt());
     slot.setParent(tupleId_);
     slot.setSlotType(column_.getType().getTColumnType());
-    slot.setMaterializedPath(ImmutableList.of(0));
+    slot.setMaterializedPath(column_.getMaterializedPath());
     slot.setByteOffset(byteOffset_);
     slot.setNullIndicatorByte(nullIndicatorByte_);
     slot.setNullIndicatorBit(nullIndicatorBit_);

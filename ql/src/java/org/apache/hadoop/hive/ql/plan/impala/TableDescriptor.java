@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 public abstract class TableDescriptor {
 
   private final HiveTableScan tableScan_;
-  private final int tableId_;
+  private final TableId tableId_;
   private static final Logger LOG = LoggerFactory.getLogger(TableDescriptor.class);
   //XXX: 
   // private CatalogObjects.TTableType tableType = TTableType.HDFS_TABLE;
@@ -53,9 +53,9 @@ public abstract class TableDescriptor {
   private final String tableName_;
 
 
-  public TableDescriptor (HiveTableScan tableScan, IdGenerator idGen) {
+  public TableDescriptor (HiveTableScan tableScan, TableId id) {
     tableScan_ = tableScan;
-    tableId_ = idGen.getNextId();
+    tableId_ = id;
     //XXX: not sure it is always db.tbl
     assert tableScan_.getTable().getQualifiedName().size() == 2;
     dbName_ = tableScan_.getTable().getQualifiedName().get(0);
@@ -72,7 +72,7 @@ public abstract class TableDescriptor {
   }
 
   public int getTableId() {
-    return tableId_;
+    return tableId_.asInt();
   }
 
   protected int getNumClusteringCols() {

@@ -18,32 +18,10 @@
 
 package org.apache.hadoop.hive.ql.plan.impala;
 
-import java.util.List;
+public enum IdGenType {
+    SLOT,
+    TUPLE,
+    PLAN,
+    TABLE
+};
 
-import org.apache.calcite.rel.core.TableScan;
-
-import org.apache.hadoop.hive.ql.impalafile.ListMap;
-import org.apache.impala.thrift.TNetworkAddress;
-import org.apache.impala.thrift.TScanRangeSpec;
-
-import com.google.common.collect.Lists;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-public abstract class ScanNode extends PlanNode {
-
-  private final TupleDescriptor tuple_; 
-  protected ScanNode(TupleDescriptor tuple, PlanId id) {
-    super(Lists.newArrayList(), Lists.newArrayList(tuple), id, tuple.getTableName());
-    tuple_ = tuple;
-  }
-
-  public TupleDescriptor getTupleDesc() {
-    return tuple_;
-  }
-
-  public TScanRangeSpec getScanRangeSpec(ListMap<TNetworkAddress> hostIndexes) {
-    return tuple_.getTableDescriptor().getScanRangeSpec(hostIndexes);
-  }
-}

@@ -95,11 +95,9 @@ public class HdfsPartition {
     scanRangesForPartition_ = new HdfsScanRangesForPartition(this, fileDescriptors_);
   }
 
-  public THdfsPartition toThrift() {
+  public THdfsPartition toThriftPrototype() {
     THdfsPartition hdfsPartition = new THdfsPartition();
-
     org.apache.hadoop.hive.metastore.api.Partition tPartition = partition_.getTPartition();
-
     Map<String, Byte> delimMap = extractDelimiters(tPartition.getSd().getSerdeInfo());
 
     hdfsPartition.setLineDelim(delimMap.get(serdeConstants.LINE_DELIM));
@@ -107,12 +105,24 @@ public class HdfsPartition {
     hdfsPartition.setCollectionDelim(delimMap.get(serdeConstants.COLLECTION_DELIM));
     hdfsPartition.setMapKeyDelim(delimMap.get(serdeConstants.MAPKEY_DELIM));
     hdfsPartition.setEscapeChar(delimMap.get(serdeConstants.ESCAPE_CHAR));
+    //XXX: for POC, this seems ok, look at in the future.
+    hdfsPartition.setPartitionKeyExprs(Lists.newArrayList());
 
     //XXX: simplify this
     //XXX: This is wrong, grabbing from table instead of partition
     hdfsPartition.setFileFormat(HdfsFileFormat.fromJavaClassName(table_.getInputFormatClass().getName()).toThrift());
-    //hdfsPartition.setFileFormat(HdfsFileFormat.fromJavaClassName(tPartition.getInputFormatClass().getName()).toThrift());
-     
+    hdfsPartition.setBlockSize(0);
+   
+    return hdfsPartition;
+  }
+
+  public THdfsPartition toThrift() {
+    THdfsPartition hdfsPartition = toThriftPrototype();
+
+    org.apache.hadoop.hive.metastore.api.Partition tPartition = partition_.getTPartition();
+
+    hdfsPartition.setId(id_);
+
     //XXX: simplify or put in function
     Map<String, String> parameters = tPartition.getSd().getSerdeInfo().getParameters();
     int blockSize = 0;
