@@ -33,6 +33,7 @@ import org.apache.impala.thrift.TTupleDescriptor;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +51,15 @@ public class TupleDescriptor {
 
   //TODO: 
   private final List<Integer> tuplePaths_ = ImmutableList.of();
+
+  private static class SortedColumnInfo {
+    public int position_;
+    public int byteOffset_;
+    public SortedColumnInfo(int position, int byteOffset) {
+      position_ = position;
+      byteOffset_ = byteOffset;
+    }
+  }
 
   public TupleDescriptor(HiveTableScan tableScan, List<RexNode> fields, TupleId id,
       Map<IdGenType, IdGenerator<?>> idGenerators) {
@@ -100,17 +110,34 @@ public class TupleDescriptor {
     return tupleId_.asInt();
   }
 
+  //XXX:
+  public boolean isNullable() {
+    return false;
+  } 
+
   private List<SlotDescriptor> createSlotDescriptors(List<Column> columns, IdGenerator<SlotId> slotIdGen) {
     List<SlotDescriptor> slotDescriptors = Lists.newArrayList();
+    Map<Column, SortedColumnInfo> sortedColumnInfoMap = createSortedColumnInfoMap(columns);
+    for (Column column : columns) {
+      SortedColumnInfo info = sortedColumnInfoMap.get(column);
+      int nullIdx = byteSize_ + info.position_ / 8;
+      slotDescriptors.add(new SlotDescriptor(column, tupleId_.asInt(), info.position_, nullIdx, info.byteOffset_, slotIdGen.getNextId()));
+    }
+    return slotDescriptors;
+  }
+
+  private Map<Column, SortedColumnInfo> createSortedColumnInfoMap(List<Column> columns) {
+    Map<Column, SortedColumnInfo> result = Maps.newHashMap();
+    List<Column> columnsCopy = Lists.newArrayList(columns);
+    Collections.sort(columnsCopy);
     int slotIdx = 0;
     int slotOffset = 0;
-    for (Column column : columns) {
-      int nullIdx = byteSize_ + slotIdx / 8;
-      slotDescriptors.add(new SlotDescriptor(column, tupleId_.asInt(), slotIdx, nullIdx, slotOffset, slotIdGen.getNextId()));
+    for (Column column : columnsCopy) {
+      result.put(column, new SortedColumnInfo(slotIdx, slotOffset));
       slotIdx++;
       slotOffset += column.getSlotSize();
     }
-    return slotDescriptors;
+    return result;
   }
 
   private List<Column> createColumns(List<RexNode> fields) {
@@ -122,7 +149,6 @@ public class TupleDescriptor {
       System.out.println("SJC: PRE SORT, FIELD = " + inputRef.getName() + ", " + field.getType().getSqlTypeName());
       columns.add(new SlotRefColumn(inputRef));
     }
-    Collections.sort(columns);
     return columns;
   }
 

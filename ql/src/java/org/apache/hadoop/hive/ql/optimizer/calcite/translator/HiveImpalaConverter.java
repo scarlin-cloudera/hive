@@ -80,6 +80,7 @@ public class HiveImpalaConverter {
   public ScanRangeLocations getScanRangeLocations() {
     return scanRangeLocations_;
   }
+
   private PlanNode dispatch(RelNode rn, List<RexNode> fields,
       Map<IdGenType, IdGenerator<?>> idGenerators) {
     if (rn instanceof HiveTableScan) {
@@ -87,9 +88,10 @@ public class HiveImpalaConverter {
     } else if (rn instanceof HiveProject) {
       return visitProject((HiveProject) rn, fields, idGenerators);
     }
-    LOG.error(rn.getClass().getCanonicalName() + "operator translation not supported"
-        + " yet in return path.");
-    return null;
+    String errorMsg = rn.getClass().getCanonicalName() + "operator translation not supported"
+        + " yet in return path.";
+    LOG.error(errorMsg);
+    throw new RuntimeException(errorMsg);
   }
 
   private PlanNode visitTableScan(HiveTableScan scanRel, List<RexNode> fields,
@@ -97,8 +99,9 @@ public class HiveImpalaConverter {
     //XXX: Probably overkill having a type param, copied it from impala.
     IdGenerator<TupleId> tupleIdGen = (IdGenerator<TupleId>) idGenerators.get(IdGenType.TUPLE);
     IdGenerator<PlanId> planIdGen = (IdGenerator<PlanId>) idGenerators.get(IdGenType.PLAN);
+    TupleDescriptor tupleDesc = new TupleDescriptor(scanRel, fields, tupleIdGen.getNextId(), idGenerators);
     //XXX: only support hdfs right now
-    return new HdfsScanNode(new TupleDescriptor(scanRel, fields, tupleIdGen.getNextId(), idGenerators), planIdGen.getNextId());
+    return new HdfsScanNode(tupleDesc, planIdGen.getNextId());
   }
 
   private PlanNode visitProject(HiveProject project, List<RexNode> fields,

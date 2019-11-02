@@ -24,7 +24,10 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TColumnType;
+import org.apache.impala.thrift.TExprNode;
+import org.apache.impala.thrift.TExprNodeType;
 import org.apache.impala.thrift.TSlotDescriptor;
+import org.apache.impala.thrift.TSlotRef;
 
 import com.google.common.collect.ImmutableList;
 
@@ -43,11 +46,27 @@ public class SlotRefColumn extends Column implements Comparable<Column> {
   }
  
   public int getIndex() {
+    System.out.println("SJC: GETTING INDEX " + inputRef_.getIndex() + " FOR COLUMN " + getName());
     return inputRef_.getIndex();
   }
 
   @Override
   public List<Integer> getMaterializedPath() {
     return ImmutableList.of(getIndex());
+  }
+
+  @Override
+  public TExprNodeType getTExprNodeType() {
+    return TExprNodeType.SLOT_REF;
+  }
+
+  public TExprNode getTExprNode(SlotId id) {
+    TExprNode expr = new TExprNode();
+    expr.setNode_type(getTExprNodeType());
+    expr.setType(getTColumnType());
+    expr.setNum_children(0);
+    expr.setIs_constant(false);
+    expr.setSlot_ref(new TSlotRef(id.asInt()));
+    return expr;
   }
 }

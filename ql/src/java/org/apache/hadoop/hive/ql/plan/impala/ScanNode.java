@@ -34,8 +34,8 @@ import org.slf4j.LoggerFactory;
 public abstract class ScanNode extends PlanNode {
 
   private final TupleDescriptor tuple_; 
-  protected ScanNode(TupleDescriptor tuple, PlanId id) {
-    super(Lists.newArrayList(), Lists.newArrayList(tuple), id, tuple.getTableName());
+  protected ScanNode(TupleDescriptor tuple, PlanId id, String displayName) {
+    super(Lists.newArrayList(), Lists.newArrayList(tuple), id, "SCAN " + displayName);
     tuple_ = tuple;
   }
 
@@ -45,5 +45,10 @@ public abstract class ScanNode extends PlanNode {
 
   public TScanRangeSpec getScanRangeSpec(ListMap<TNetworkAddress> hostIndexes) {
     return tuple_.getTableDescriptor().getScanRangeSpec(hostIndexes);
+  }
+
+  @Override
+  protected String getDisplayLabelDetail() {
+    return tuple_.getTableDescriptor().getFullTableName(); 
   }
 }

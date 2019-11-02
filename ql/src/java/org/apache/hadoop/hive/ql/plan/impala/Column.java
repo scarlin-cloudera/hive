@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.calcite.rex.RexNode;
 import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TColumnType;
+import org.apache.impala.thrift.TExprNodeType;
 import org.apache.impala.thrift.TSlotDescriptor;
 
 import com.google.common.collect.ImmutableList;
@@ -63,6 +64,10 @@ public abstract class Column implements Comparable<Column> {
     return name_.compareTo(other.name_);
   }
 
+  public String getName() {
+    return name_;
+  }
+
   public int getSlotSize() {
     return type_.getSlotSize();
   }
@@ -71,5 +76,11 @@ public abstract class Column implements Comparable<Column> {
     return new TColumn(name_, type_.getTColumnType());
   }  
 
+  public TColumnType getTColumnType() {
+    return type_.getTColumnType();
+  }  
+
   public abstract List<Integer> getMaterializedPath();
+
+  public abstract TExprNodeType getTExprNodeType();
 }

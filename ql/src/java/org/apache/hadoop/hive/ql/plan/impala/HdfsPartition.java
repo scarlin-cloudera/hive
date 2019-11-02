@@ -105,6 +105,7 @@ public class HdfsPartition {
     hdfsPartition.setCollectionDelim(delimMap.get(serdeConstants.COLLECTION_DELIM));
     hdfsPartition.setMapKeyDelim(delimMap.get(serdeConstants.MAPKEY_DELIM));
     hdfsPartition.setEscapeChar(delimMap.get(serdeConstants.ESCAPE_CHAR));
+    hdfsPartition.setId(-1);
     //XXX: for POC, this seems ok, look at in the future.
     hdfsPartition.setPartitionKeyExprs(Lists.newArrayList());
 

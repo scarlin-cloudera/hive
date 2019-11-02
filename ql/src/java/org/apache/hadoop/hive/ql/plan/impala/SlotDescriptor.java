@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TColumnType;
+import org.apache.impala.thrift.TExprNode;
 import org.apache.impala.thrift.TSlotDescriptor;
 
 import com.google.common.collect.ImmutableList;
@@ -75,4 +76,14 @@ public class SlotDescriptor {
   public TColumn getTColumn() {
     return column_.getTColumn();
   }  
+
+  public TExprNode getTExprNode() {
+    switch(column_.getTExprNodeType()) {
+      case SLOT_REF:
+        SlotRefColumn slotColumn = (SlotRefColumn) column_;
+        return slotColumn.getTExprNode(slotId_);
+      default:
+        throw new RuntimeException("Column type not supported: " + column_.getTExprNodeType());
+    }
+  }
 }

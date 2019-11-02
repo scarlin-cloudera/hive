@@ -21,10 +21,15 @@ package org.apache.hadoop.hive.ql.plan.impala;
 import java.util.List;
 
 import org.apache.impala.thrift.TColumn;
+import org.apache.impala.thrift.TDataSink;
+import org.apache.impala.thrift.TDataSinkType;
 import org.apache.impala.thrift.TExecNodePhase;
 import org.apache.impala.thrift.TExecStats;
+import org.apache.impala.thrift.TExpr;
+import org.apache.impala.thrift.TExprNode;
 import org.apache.impala.thrift.TPlan;
 import org.apache.impala.thrift.TPlanNode;
+import org.apache.impala.thrift.TPlanRootSink;
 import org.apache.impala.thrift.TResultSetMetadata;
 
 import com.google.common.base.Preconditions;
@@ -34,7 +39,7 @@ import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class PlanNode {
+public abstract class PlanNode extends TreeNode<PlanNode> {
   protected abstract TPlanNode createDerivedTPlanNode();
 
   private final PlanId id_;
@@ -80,7 +85,7 @@ public abstract class PlanNode {
   public TPlanNode getTPlanNode() {
     TPlanNode planNode = createDerivedTPlanNode();
     planNode.setNode_id(id_.asInt());
-    planNode.setLimit(0);
+    planNode.setLimit(-1);
 
     TExecStats estimatedStats = new TExecStats();
     //TODO: get stats
@@ -96,7 +101,7 @@ public abstract class PlanNode {
     planNode.setNullable_tuples(Lists.<Boolean>newArrayListWithCapacity(tuples_.size()));
     for (TupleDescriptor tuple : tuples_) {
       planNode.addToRow_tuples(tuple.getTupleId());
-//      planNode.addToNullable_tuples(nullableTupleIds_.contains(tid));
+      planNode.addToNullable_tuples(tuple.isNullable());
     }   
     /*
     for (Expr e: conjuncts_) {
@@ -182,5 +187,29 @@ public abstract class PlanNode {
 
   public boolean hasCorruptTableStats() {
     return false;
+  }
+
+  public TDataSink getPlanRootDataSink() {
+    TDataSink dataSink = new TDataSink();
+    dataSink.setType(TDataSinkType.PLAN_ROOT_SINK);
+    TPlanRootSink planRootSink = new TPlanRootSink();
+    //XXX:
+    ResourceProfile resourceProfile = new ResourceProfile(false, -1, 0, 0, -1, -1, -1);
+    planRootSink.setResource_profile(resourceProfile.toThrift()); 
+    dataSink.setPlan_root_sink(planRootSink);
+    //XXX: fill this in
+    dataSink.setLabel(""); 
+    //XXX:
+    TExecStats estimatedStats = new TExecStats();
+    estimatedStats.setMemory_used(0);
+    dataSink.setEstimated_stats(estimatedStats);
+    for (TupleDescriptor tuple : tuples_) {
+      for (SlotDescriptor slotDescriptor : tuple.getSlotDescriptors()) {
+        TExpr expr = new TExpr();
+        expr.addToNodes(slotDescriptor.getTExprNode());
+        dataSink.addToOutput_exprs(expr);
+      }
+    }
+    return dataSink;
   }
 }

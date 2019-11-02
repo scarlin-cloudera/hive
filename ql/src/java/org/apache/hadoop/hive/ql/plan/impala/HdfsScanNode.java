@@ -26,6 +26,8 @@ import org.apache.impala.thrift.THdfsScanNode;
 import org.apache.impala.thrift.TPlanNode;
 import org.apache.impala.thrift.TPlanNodeType;
 
+import com.google.common.collect.Maps;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +35,7 @@ public class HdfsScanNode extends ScanNode {
   private final static Logger LOG = LoggerFactory.getLogger(HdfsScanNode.class);
 
   public HdfsScanNode(TupleDescriptor tuple, PlanId id) {
-    super(tuple, id);
+    super(tuple, id, "HDFS");
   }
 
   @Override
@@ -43,13 +45,17 @@ public class HdfsScanNode extends ScanNode {
     planNode.setNode_type(TPlanNodeType.HDFS_SCAN_NODE);
     hdfsScanNode.setUse_mt_scan_node(false);
     planNode.setHdfs_scan_node(hdfsScanNode);
+    //XXX: fix this
+    hdfsScanNode.setRandom_replica(false);
+    //XXX: fix this
+    hdfsScanNode.setDictionary_filter_conjuncts(Maps.newHashMap());
+
     //XXX:
 /*
     if (replicaPreference_ != null) {
       msg.hdfs_scan_node.setReplica_preference(replicaPreference_);
     }    
 */
-    //XXX: msg.hdfs_scan_node.setRandom_replica(randomReplica_);
 /* XXX:
     if (!collectionConjuncts_.isEmpty()) {
       Map<Integer, List<TExpr>> tcollectionConjuncts = new LinkedHashMap<>();

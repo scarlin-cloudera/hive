@@ -150,7 +150,9 @@ public class HdfsTableDescriptor extends TableDescriptor {
     THdfsTable hdfsTable = new THdfsTable();
     hdfsTable.setHdfsBaseDir(tableMD.getPath().toString());
     //XXX: This says deprecated, hope they're right.
-    hdfsTable.setColNames(Lists.newArrayList());
+    for (ColumnDescriptor columnDesc : columnDescriptors_) {
+      hdfsTable.addToColNames(columnDesc.getName());
+    }
     //XXX: get this from hive conf
     hdfsTable.setNullPartitionKeyValue(DEFAULT_NULL_PARTITION_KEY_VALUE);
 

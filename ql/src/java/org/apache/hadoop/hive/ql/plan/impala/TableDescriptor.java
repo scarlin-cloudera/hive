@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.hadoop.hive.ql.impalafile.ListMap;
+import org.apache.hadoop.hive.ql.optimizer.calcite.RelOptHiveTable;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveTableScan;
 import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TColumnDescriptor;
@@ -44,7 +45,7 @@ public abstract class TableDescriptor {
   private static final Logger LOG = LoggerFactory.getLogger(TableDescriptor.class);
   //XXX: 
   // private CatalogObjects.TTableType tableType = TTableType.HDFS_TABLE;
-  private final ImmutableList<ColumnDescriptor> columnDescriptors_;
+  protected final ImmutableList<ColumnDescriptor> columnDescriptors_;
 
   private final int numClusteringCols_ = 0;
 
@@ -61,9 +62,14 @@ public abstract class TableDescriptor {
     dbName_ = tableScan_.getTable().getQualifiedName().get(0);
     tableName_ = tableScan_.getTable().getQualifiedName().get(1);
     List<ColumnDescriptor> columns = Lists.newArrayList();
-    for (RelDataTypeField column : tableScan_.getTable().getRowType().getFieldList()) {
-      columns.add(new ColumnDescriptor(column));
+    System.out.println("SJC: IN TABLE DESCRIPTOR, PRINTING MAIN COLUMNS");
+    RelOptHiveTable hiveTable = (RelOptHiveTable) tableScan_.getTable();
+    List<RelDataTypeField> fieldList = tableScan_.getTable().getRowType().getFieldList();
+    for (int i = 0; i < hiveTable.getNoOfNonVirtualCols(); ++i) {
+      System.out.println("SJC: COLUMN IS " + fieldList.get(i));
+      columns.add(new ColumnDescriptor(fieldList.get(i)));
     }
+
     columnDescriptors_ = ImmutableList.<ColumnDescriptor>builder().addAll(columns).build();
   }
 
@@ -85,6 +91,10 @@ public abstract class TableDescriptor {
   
   protected String getDbName() {
     return dbName_;
+  }
+
+  public String getFullTableName() {
+    return dbName_ + "." + tableName_;
   }
 
   abstract public TTableDescriptor toThrift();
