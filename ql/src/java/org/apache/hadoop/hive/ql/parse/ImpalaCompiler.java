@@ -17,8 +17,53 @@
  */
 package org.apache.hadoop.hive.ql.parse;
 
-public class ImpalaCompiler extends TezCompiler {
-    ImpalaCompiler() {
+import org.apache.hadoop.hive.ql.Context;
+import org.apache.hadoop.hive.ql.exec.Task;
+import org.apache.hadoop.hive.ql.exec.TaskFactory;
+import org.apache.hadoop.hive.ql.hooks.ReadEntity;
+import org.apache.hadoop.hive.ql.hooks.WriteEntity;
+import org.apache.hadoop.hive.ql.plan.MoveWork;
+import org.apache.hadoop.hive.ql.plan.impala.ImpalaWork;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
+import java.util.Set;
+
+public class ImpalaCompiler extends TaskCompiler {
+    protected static final Logger LOG = LoggerFactory.getLogger(ImpalaCompiler.class);
+
+    ImpalaCompiler() { }
+
+    @Override
+    protected void decideExecMode(List<Task<?>> rootTasks, Context ctx, GlobalLimitCtx globalLimitCtx) throws SemanticException {
+        // does nothing
+        LOG.info("decideExecMode");
+    }
+
+    @Override
+    protected void optimizeTaskPlan(List<Task<?>> rootTasks, ParseContext pCtx, Context ctx) throws SemanticException {
+        LOG.info("optimizeTaskPlan");
 
     }
+
+    @Override
+    protected void setInputFormat(Task<?> rootTask) {
+        LOG.info("setInput");
+    }
+
+    @Override
+    protected void generateTaskTree(List<Task<?>> rootTasks, ParseContext pCtx,
+                                    List<Task<MoveWork>> mvTask, Set<ReadEntity> inputs, Set<WriteEntity> outputs)
+            throws SemanticException {
+        LOG.info("generateTaskTree");
+        rootTasks.add(TaskFactory.get(new ImpalaWork(pCtx.getQueryState().getQueryString())));
+    }
+
+    @Override
+    protected void optimizeOperatorPlan(ParseContext pCtx, Set<ReadEntity> inputs,
+                                        Set<WriteEntity> outputs) throws SemanticException {
+        LOG.info("optimizerOperatorPlan");
+    }
+
 }

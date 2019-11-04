@@ -46,6 +46,7 @@ import org.apache.hadoop.hive.ql.plan.MoveWork;
 import org.apache.hadoop.hive.ql.plan.SparkWork;
 import org.apache.hadoop.hive.ql.plan.StatsWork;
 import org.apache.hadoop.hive.ql.plan.TezWork;
+import org.apache.hadoop.hive.ql.plan.impala.ImpalaWork;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,6 +71,10 @@ public class QueryPlanPostProcessor {
         for(BaseWork bw : ((TezWork)work).getAllWorkUnsorted()) {
           collectFileSinkDescs(bw.getAllLeafOperators(), acidSinks);
         }
+      }
+      else if(work instanceof ImpalaWork) {
+        // IMPALA TODO: Implement
+        LOG.debug("QueryPlanPostProcessor for ImpalaWork");
       }
       else if(work instanceof BaseWork) {
         collectFileSinkDescs(((BaseWork)work).getAllLeafOperators(), acidSinks);

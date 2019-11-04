@@ -430,7 +430,9 @@ public class CalcitePlanner extends SemanticAnalyzer {
     Operator sinkOp = null;
     boolean skipCalcitePlan = false;
     System.out.println("SJC: IN GENOPTREE");
-
+    // TODO: enable once we are sending plan to IMPALA
+    //boolean runImpala = runImpala = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).equals("impala");
+    boolean runImpala = true;
     if (!runCBO) {
       skipCalcitePlan = true;
     } else {
@@ -466,13 +468,15 @@ public class CalcitePlanner extends SemanticAnalyzer {
         try {
           // 0. Gen Optimized Plan
           RelNode newPlan = logicalPlan();
-          HiveImpalaConverter sjcSpecial = new HiveImpalaConverter(newPlan);
-          System.out.println("SJC: ROOT PLAN NODE THRIFT IS " + sjcSpecial.getRootPlanNode().treeToThrift());
-          System.out.println("SJC: DESCRIPTOR TABLE THRIFT IS " + sjcSpecial.getDescriptorTable().toThrift());
-          for (ScanNode scanNode : sjcSpecial.getScanRangeLocations().getScanNodes()) {
-            System.out.println("SJC: SCAN NODE SPEC IS " + sjcSpecial.getScanRangeLocations().getScanRangeSpec(scanNode));
-          } 
-          System.out.println("SJC: TRESULTSETMETADATA IS " + sjcSpecial.getRootPlanNode().getTResultSetMetadata());
+          if (runImpala) {
+            HiveImpalaConverter sjcSpecial = new HiveImpalaConverter(newPlan);
+            System.out.println("SJC: ROOT PLAN NODE THRIFT IS " + sjcSpecial.getRootPlanNode().treeToThrift());
+            System.out.println("SJC: DESCRIPTOR TABLE THRIFT IS " + sjcSpecial.getDescriptorTable().toThrift());
+            for (ScanNode scanNode : sjcSpecial.getScanRangeLocations().getScanNodes()) {
+              System.out.println("SJC: SCAN NODE SPEC IS " + sjcSpecial.getScanRangeLocations().getScanRangeSpec(scanNode));
+            }
+            System.out.println("SJC: TRESULTSETMETADATA IS " + sjcSpecial.getRootPlanNode().getTResultSetMetadata());
+          }
 
           if (this.conf.getBoolVar(HiveConf.ConfVars.HIVE_CBO_RETPATH_HIVEOP)) {
             if (cboCtx.type == PreCboCtx.Type.VIEW && !materializedView) {
