@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.calcite.rel.core.TableScan;
 
+import org.apache.impala.thrift.TExplainLevel;
 import org.apache.impala.thrift.THdfsScanNode;
 import org.apache.impala.thrift.TPlanNode;
 import org.apache.impala.thrift.TPlanNodeType;
@@ -33,6 +34,9 @@ import org.slf4j.LoggerFactory;
 
 public class HdfsScanNode extends ScanNode {
   private final static Logger LOG = LoggerFactory.getLogger(HdfsScanNode.class);
+
+  //XXX: calculate this
+  private final int maxScanRangeNumRows_ = -1;
 
   public HdfsScanNode(TupleDescriptor tuple, PlanId id) {
     super(tuple, id, "HDFS");
@@ -92,5 +96,88 @@ public class HdfsScanNode extends ScanNode {
     msg.hdfs_scan_node.setDictionary_filter_conjuncts(dictMap);
 */
     return planNode;
+  }
+
+  protected String getDerivedExplainString(String prefix, String detailPrefix, TExplainLevel detailLevel) {
+    StringBuilder output = new StringBuilder();
+    output.append(String.format("%s%s [%s", prefix, getDisplayLabel(),
+        getDisplayLabelDetail()));
+    //XXX: Impala is printing "RANDOM" here, but need to figure out about fragment
+/*
+    if (detailLevel.ordinal() >= TExplainLevel.EXTENDED.ordinal() &&
+        fragment_.isPartitioned()) {
+      output.append(", " + fragment_.getDataPartition().getExplainString());
+    }    
+*/
+    output.append("]\n");
+    if (detailLevel.ordinal() >= TExplainLevel.STANDARD.ordinal()) {
+/*
+      if (partitionConjuncts_ != null && !partitionConjuncts_.isEmpty()) {
+        output.append(detailPrefix)
+          .append(String.format("partition predicates: %s\n",
+              Expr.getExplainString(partitionConjuncts_, detailLevel)));
+      }    
+*/
+      output.append(getTupleDesc().getPartitionExplainString(detailPrefix));
+
+/* XXX:fill in once we add where clause
+      if (!conjuncts_.isEmpty()) {
+        output.append(detailPrefix)
+          .append(String.format("predicates: %s\n",
+              Expr.getExplainString(conjuncts_, detailLevel)));
+      }
+*/
+/*
+      if (!collectionConjuncts_.isEmpty()) {
+        for (Map.Entry<TupleDescriptor, List<Expr>> entry:
+          collectionConjuncts_.entrySet()) {
+          String alias = entry.getKey().getAlias();
+          output.append(detailPrefix)
+            .append(String.format("predicates on %s: %s\n", alias,
+                Expr.getExplainString(entry.getValue(), detailLevel)));
+        }
+      }
+*/
+/*
+      if (!runtimeFilters_.isEmpty()) {
+        output.append(detailPrefix + "runtime filters: ");
+        output.append(getRuntimeFilterExplainString(false, detailLevel));
+      }
+*/
+    }
+    if (detailLevel.ordinal() >= TExplainLevel.EXTENDED.ordinal()) {
+    //XXX: put in stats string
+//      output.append(getStatsExplainString(detailPrefix)).append("\n");
+      String extrapRows;
+      if (/*XXXFeFsTable.Utils.isStatsExtrapolationEnabled(tbl_)*/ false) {
+//        extrapRows = PrintUtils.printEstCardinality(extrapolatedNumRows_);
+      } else {
+        extrapRows = "disabled";
+      }
+      output.append(detailPrefix)
+            .append("extrapolated-rows=")
+            .append(extrapRows)
+            .append(" max-scan-range-rows=")
+            .append(PrintUtils.printEstCardinality(maxScanRangeNumRows_))
+            .append("\n");
+/* XXX:
+      if (numScanRangesNoDiskIds_ > 0) {
+        output.append(detailPrefix)
+          .append(String.format("missing disk ids: "
+                + "partitions=%s/%s files=%s/%s scan ranges %s/%s\n",
+            numPartitionsNoDiskIds_, sumValues(numPartitionsPerFs_),
+            numFilesNoDiskIds_, sumValues(totalFilesPerFs_), numScanRangesNoDiskIds_,
+            scanRangeSpecs_.getConcrete_rangesSize() + generatedScanRangeCount_));
+      }
+*/
+/*XXX:
+      // Groups the min max original conjuncts by tuple descriptor.
+//      output.append(getMinMaxOriginalConjunctsExplainString(detailPrefix, detailLevel));
+      // Groups the dictionary filterable conjuncts by tuple descriptor.
+//      output.append(getDictionaryConjunctsExplainString(detailPrefix, detailLevel));
+*/
+    }
+
+    return output.toString();
   }
 }

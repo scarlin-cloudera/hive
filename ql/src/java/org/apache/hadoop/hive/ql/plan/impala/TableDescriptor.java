@@ -73,6 +73,10 @@ public abstract class TableDescriptor {
     columnDescriptors_ = ImmutableList.<ColumnDescriptor>builder().addAll(columns).build();
   }
 
+  public ColumnDescriptor getColumnDescriptor(int index) {
+    return columnDescriptors_.get(index);
+  } 
+
   public HiveTableScan getTableScan() {
     return tableScan_;
   }
@@ -102,6 +106,8 @@ public abstract class TableDescriptor {
   abstract public List<ListMap<TNetworkAddress>> getAllHostIndexes();
 
   abstract public TScanRangeSpec getScanRangeSpec(ListMap<TNetworkAddress> hostIndexes);
+
+  abstract public String getPartitionExplainString(String detailPrefix);
 
   protected List<TColumnDescriptor> getTColumnDescriptors() {
     List<TColumnDescriptor> columns = Lists.newArrayList();

@@ -38,7 +38,7 @@ import org.apache.impala.thrift.TPipelineMembership;
  */
 public class PipelineMembership {
   // The id of the bottom-most node in the pipeline. Used to identify the pipeline.
-  private final int id_;
+  private final PlanId id_;
 
   // The height of this node in the pipeline. Starts at 0.
   private final int height_;
@@ -47,13 +47,13 @@ public class PipelineMembership {
   private final TExecNodePhase phase_;
 
 
-  public PipelineMembership(int id, int height, TExecNodePhase phase) {
+  public PipelineMembership(PlanId id, int height, TExecNodePhase phase) {
     this.id_ = id;
     this.height_ = height;
     this.phase_ = phase;
   }
 
-  public int getId() {
+  public PlanId getId() {
     return id_;
   }
 
@@ -66,7 +66,7 @@ public class PipelineMembership {
   }
 
   public TPipelineMembership toThrift() {
-    return new TPipelineMembership(id_, height_, phase_);
+    return new TPipelineMembership(id_.asInt(), height_, phase_);
   }
 
   public String getExplainString() {

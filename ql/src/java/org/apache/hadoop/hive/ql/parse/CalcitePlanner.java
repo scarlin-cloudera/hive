@@ -252,6 +252,7 @@ import org.apache.hadoop.hive.ql.plan.ExprNodeDescUtils;
 import org.apache.hadoop.hive.ql.plan.GroupByDesc;
 import org.apache.hadoop.hive.ql.plan.HiveOperation;
 import org.apache.hadoop.hive.ql.plan.SelectDesc;
+import org.apache.hadoop.hive.ql.plan.impala.PlanRootSink;
 import org.apache.hadoop.hive.ql.plan.impala.ScanNode;
 import org.apache.hadoop.hive.ql.plan.mapper.EmptyStatsSource;
 import org.apache.hadoop.hive.ql.plan.mapper.StatsSource;
@@ -272,6 +273,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.StructTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
+import org.apache.impala.thrift.TExplainLevel;
 import org.joda.time.Interval;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -478,7 +480,10 @@ public class CalcitePlanner extends SemanticAnalyzer {
                 System.out.println("SJC: SCAN NODE SPEC IS " + sjcSpecial.getScanRangeLocations().getScanRangeSpec(scanNode));
               }
               System.out.println("SJC: TRESULTSETMETADATA IS " + sjcSpecial.getRootPlanNode().getTResultSetMetadata());
-              System.out.println("SJC: PLAN ROOT DATA SINK IS " + sjcSpecial.getRootPlanNode().getPlanRootDataSink());
+              PlanRootSink planRootSink = new PlanRootSink(sjcSpecial.getRootPlanNode());
+              System.out.println("SJC: PLAN ROOT DATA SINK IS " + planRootSink.getTDataSink());
+              System.out.println("SJC: EXPLAIN ROOT NODE\n" + sjcSpecial.getRootPlanNode().getExplainString("", "", TExplainLevel.VERBOSE));
+              System.out.println("SJC: EXPLAIN PLAN ROOT SINK\n" + planRootSink.getExplainString("", "|  ", TExplainLevel.VERBOSE));
             } catch (Exception e) {
               System.out.println("SJC: IMPALA CONVERSION DID NOT RUN");
               e.printStackTrace();

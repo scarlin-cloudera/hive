@@ -30,6 +30,7 @@ import com.google.common.collect.Maps;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
+import org.apache.hadoop.hive.ql.impalafile.FileSystemUtil;
 import org.apache.hadoop.hive.ql.metadata.Partition;
 import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.serde.serdeConstants;
@@ -157,6 +158,19 @@ public class HdfsPartition {
     return scanRangesForPartition_.toThrift(hostIndexes);
   }
   
+  public long getFilesLength() {
+    return FileDescriptor.computeTotalFileLength(fileDescriptors_);
+  }
+
+  public int getNumFiles() {
+    return fileDescriptors_.size();
+  }
+
+  //XXX: DO NOT HARDCODE THIS, GET FROM LOCATION!!!!
+  public FileSystemUtil.FsType getFsType() {
+    return FileSystemUtil.FsType.HDFS;
+  }
+
   //XXX: CLEANUP
   private static Map<String, Byte> extractDelimiters(SerDeInfo serdeInfo) {
     // The metastore may return null for delimiter parameters,

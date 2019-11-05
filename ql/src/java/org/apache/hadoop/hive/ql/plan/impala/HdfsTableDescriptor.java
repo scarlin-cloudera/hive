@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.hadoop.hive.metastore.api.SerDeInfo;
+import org.apache.hadoop.hive.ql.impalafile.FileSystemUtil;
 import org.apache.hadoop.hive.ql.impalafile.ListMap;
 import org.apache.hadoop.hive.ql.optimizer.calcite.RelOptHiveTable;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveTableScan;
@@ -49,24 +50,13 @@ import org.slf4j.LoggerFactory;
 
 public class HdfsTableDescriptor extends TableDescriptor {
 
-  //TODO;:
-  private final String hdfsBaseDir_ = "";
-
-  // The string used to represent NULL partition keys.
-  //XXX:
-  private final String nullPartitionKeyValue_ = "";
-
-  // String to indicate a NULL column value in text files
-  //XXX:
-  private final String nullColumnValue_ = "";
-
   // Set to the table's Avro schema if this is an Avro table
   //XXX:
   private final String avroSchema_ = "";
 
   public static final String DEFAULT_NULL_COLUMN_VALUE = "\\N";
 
-  //XXX: extracted from hdfsstoragedescriptor from impala
+  // extracted from hdfsstoragedescriptor from impala
   public static final char DEFAULT_LINE_DELIM = '\n';
   // hive by default uses ctrl-a as field delim
   public static final char DEFAULT_FIELD_DELIM = '\u0001';
@@ -88,35 +78,35 @@ public class HdfsTableDescriptor extends TableDescriptor {
       serdeConstants.COLLECTION_DELIM, serdeConstants.MAPKEY_DELIM,
       serdeConstants.ESCAPE_CHAR, serdeConstants.QUOTE_CHAR);
 
-  //TODO:
-  // private final ImmutableMap<Long, HdfsPartition> partitions_;
-
-  // Prototype partition, used when creating new partitions during insert.
-  //TODO:
-  //private final HdfsPartition prototypePartition;
-
-  //TODO:
-  //private final HdfsPartition prototypePartition;
-
-  // The prefixes of locations of partitions in this table. See THdfsPartitionLocation for
-  // the description of how a prefix is computed.
-  //TODO;
-  //private ImmutableList<String> partitionPrefixes = ImmutableList.of();
-
-  // ============================================================
-  // Fields only included when the catalogd serializes a table to be
-  // sent to the impalad as part of a catalog update.
-  // ============================================================
-
-  // Each TNetworkAddress is a datanode which contains blocks of a file in the table.
-  // Used so that each THdfsFileBlock can just reference an index in this list rather
-  // than duplicate the list of network address, which helps reduce memory usage.
-  //XXX: see above comment, do we need this first cut?
-  //private final ImmutableList<NetworkAddress> networkAddresses_;
-
   private final List<HdfsPartition> partitions_;
 
   private static final Logger LOG = LoggerFactory.getLogger(HdfsTableDescriptor.class);
+
+  //XXX: not supported yet
+  private final boolean sampling_ = false;
+
+  private static class PartitionStatsByFsType {
+    public int numPartitions_;
+    public int totalFiles_;
+    public long totalBytes_;
+
+    public PartitionStatsByFsType() {
+    }
+
+    public PartitionStatsByFsType(int numPartitions, int totalFiles, long totalBytes) {
+      numPartitions_ = numPartitions;
+      totalFiles_ = totalFiles;
+      totalBytes_ = totalBytes;
+    }
+
+    public PartitionStatsByFsType sum(PartitionStatsByFsType valueToAdd) {
+      PartitionStatsByFsType retVal = new PartitionStatsByFsType();
+      retVal.numPartitions_ = this.numPartitions_ + valueToAdd.numPartitions_;
+      retVal.totalFiles_ = this.totalFiles_ + valueToAdd.totalFiles_;
+      retVal.totalBytes_ = this.totalBytes_ + valueToAdd.totalBytes_;
+      return retVal;
+    }
+  }
 
   public HdfsTableDescriptor(HiveTableScan tableScan, TableId tableId) {
     super(tableScan, tableId);
@@ -142,14 +132,13 @@ public class HdfsTableDescriptor extends TableDescriptor {
   }   
 
   private THdfsTable getTHdfsTable(HiveTableScan tableScan) {
-    assert tableScan.getTable() instanceof RelOptHiveTable;
+    assert getTableScan().getTable() instanceof RelOptHiveTable;
     //XXX: move some of this up to parent
-    RelOptHiveTable hiveTable = (RelOptHiveTable) tableScan.getTable();
+    RelOptHiveTable hiveTable = (RelOptHiveTable) getTableScan().getTable();
     Table tableMD = hiveTable.getHiveTableMD();
     
     THdfsTable hdfsTable = new THdfsTable();
     hdfsTable.setHdfsBaseDir(tableMD.getPath().toString());
-    //XXX: This says deprecated, hope they're right.
     for (ColumnDescriptor columnDesc : columnDescriptors_) {
       hdfsTable.addToColNames(columnDesc.getName());
     }
@@ -165,7 +154,6 @@ public class HdfsTableDescriptor extends TableDescriptor {
     Map<Long, THdfsPartition> idToPartition = Maps.newHashMap();
     for (HdfsPartition partition : partitions_) {
       THdfsPartitionLocation partitionLocation = new THdfsPartitionLocation();
-      //XXX: is id number correct?
       idToPartition.put((long)partition.getId(), partition.toThrift());
       hdfsTable.addToPartition_prefixes(partition.getLocation());
     }
@@ -197,4 +185,52 @@ public class HdfsTableDescriptor extends TableDescriptor {
     }
     return scanRangeSpec;
   }
+
+  @Override
+  public String getPartitionExplainString(String detailPrefix) {
+    StringBuilder output = new StringBuilder();
+    String partMetaTemplate = "partitions=%d/%d files=%d size=%s\n";
+    if (!partitions_.isEmpty()) {
+      assert !sampling_;
+      Map<FileSystemUtil.FsType, PartitionStatsByFsType> statsMap = Maps.newHashMap();
+      for (HdfsPartition partition : partitions_) {
+        PartitionStatsByFsType stats =
+            new PartitionStatsByFsType(1, partition.getNumFiles(), partition.getFilesLength());
+        statsMap.merge(partition.getFsType(), stats, PartitionStatsByFsType::sum);
+      }
+
+      for (FileSystemUtil.FsType fsType : statsMap.keySet()) {
+        PartitionStatsByFsType value = statsMap.get(fsType);
+        output.append(detailPrefix);
+        output.append(fsType).append(" ");
+        output.append(String.format(partMetaTemplate, value.numPartitions_,
+            partitions_.size(), value.totalFiles_,
+            PrintUtils.printBytes(value.totalBytes_)));
+      }    
+    } else if (getNumClusteringCols() == 0) {
+      // There are no partitions so we use the FsType of the base table
+      output.append(detailPrefix);
+      output.append(getFsType()).append(" ");
+      output.append(String.format(partMetaTemplate, 1, partitions_.size(),
+          0, PrintUtils.printBytes(0)));
+    } else {
+      // The table is partitioned, but no partitions are selected; in this case we
+      // exclude the FsType completely
+      output.append(detailPrefix);
+      output.append(String.format(partMetaTemplate, 0, partitions_.size(),
+          0, PrintUtils.printBytes(0)));
+    }
+    return output.toString();
+  }
+
+  public FileSystemUtil.FsType getFsType() {
+    assert getTableScan().getTable() instanceof RelOptHiveTable;
+    //XXX: move some of this up to parent
+    RelOptHiveTable hiveTable = (RelOptHiveTable) getTableScan().getTable();
+    Table tableMD = hiveTable.getHiveTableMD();
+    Preconditions.checkNotNull(tableMD.getPath().toUri().getScheme(),
+        "Cannot get scheme from path " + tableMD.getPath());
+    return FileSystemUtil.FsType.getFsType(tableMD.getPath().toUri().getScheme());
+  }
+
 }

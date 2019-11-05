@@ -164,4 +164,22 @@ public class ResourceProfile {
     }
     return result;
   }
+  // Return a string with the resource profile information suitable for display in an
+  // explain plan in a format like: "resource1=value resource2=value"
+  public String getExplainString() {
+    StringBuilder output = new StringBuilder();
+    output.append("mem-estimate=");
+    output.append(isValid_ ? PrintUtils.printBytes(memEstimateBytes_) : "invalid");
+    output.append(" mem-reservation=");
+    output.append(isValid_ ? PrintUtils.printBytes(minMemReservationBytes_) : "invalid");
+    // TODO: output maxReservation_ here if the planner becomes more sophisticated in
+    // choosing it (beyond 0/unlimited).
+    if (isValid_ && spillableBufferBytes_ != -1) {
+      output.append(" spill-buffer=");
+      output.append(PrintUtils.printBytes(spillableBufferBytes_));
+    }   
+    output.append(" thread-reservation=");
+    output.append(isValid_ ? threadReservation_ : "invalid");
+    return output.toString();
+  }
 }

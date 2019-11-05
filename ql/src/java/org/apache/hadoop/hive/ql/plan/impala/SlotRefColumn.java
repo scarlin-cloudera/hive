@@ -38,11 +38,16 @@ public class SlotRefColumn extends Column implements Comparable<Column> {
 
   private final RexInputRef inputRef_;
 
+  private final ColumnDescriptor columnDesc_;
+
   private static final Logger LOG = LoggerFactory.getLogger(SlotRefColumn.class);
 
-  public SlotRefColumn(RexInputRef inputRef) {
-    super(inputRef, inputRef.getName());
+  public SlotRefColumn(RexInputRef inputRef, String tableName, ColumnDescriptor columnDesc) {
+    // XXX:Columndesc.getName() is used to populate explain string for plan root sink
+    // if for some reason this needs changing, be aware of this
+    super(inputRef, tableName + "." + columnDesc.getName());
     inputRef_ = inputRef;
+    columnDesc_ = columnDesc;
   }
  
   public int getIndex() {

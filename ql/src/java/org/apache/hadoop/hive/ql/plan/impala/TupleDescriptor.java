@@ -115,6 +115,10 @@ public class TupleDescriptor {
     return false;
   } 
 
+  public String getPartitionExplainString(String detailPrefix) {
+    return tableDescriptor_.getPartitionExplainString(detailPrefix);
+  }
+
   private List<SlotDescriptor> createSlotDescriptors(List<Column> columns, IdGenerator<SlotId> slotIdGen) {
     List<SlotDescriptor> slotDescriptors = Lists.newArrayList();
     Map<Column, SortedColumnInfo> sortedColumnInfoMap = createSortedColumnInfoMap(columns);
@@ -147,7 +151,8 @@ public class TupleDescriptor {
       assert field instanceof RexInputRef;
       RexInputRef inputRef = (RexInputRef) field;
       System.out.println("SJC: PRE SORT, FIELD = " + inputRef.getName() + ", " + field.getType().getSqlTypeName());
-      columns.add(new SlotRefColumn(inputRef));
+      columns.add(new SlotRefColumn(inputRef, tableDescriptor_.getFullTableName(),
+          tableDescriptor_.getColumnDescriptor(inputRef.getIndex())));
     }
     return columns;
   }

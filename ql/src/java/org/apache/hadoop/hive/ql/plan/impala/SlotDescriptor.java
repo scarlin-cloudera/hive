@@ -57,7 +57,6 @@ public class SlotDescriptor {
     nullIndicatorByte_ = nullIdx;
     nullIndicatorBit_ = slotIdx % 8;
     slotIdx_ = slotIdx;
-    //XXX: materializedPath is hardcoded for now.
   }
 
   public TSlotDescriptor toThrift() {
@@ -85,5 +84,9 @@ public class SlotDescriptor {
       default:
         throw new RuntimeException("Column type not supported: " + column_.getTExprNodeType());
     }
+  }
+
+  public String getName() {
+    return column_.getName();
   }
 }
