@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.calcite.rel.core.TableScan;
 
 import org.apache.hadoop.hive.ql.impalafile.ListMap;
+import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveFilter;
 import org.apache.impala.thrift.TNetworkAddress;
 import org.apache.impala.thrift.TScanRangeSpec;
 
@@ -34,8 +35,8 @@ import org.slf4j.LoggerFactory;
 public abstract class ScanNode extends PlanNode {
 
   private final TupleDescriptor tuple_; 
-  protected ScanNode(TupleDescriptor tuple, PlanId id, String displayName) {
-    super(Lists.newArrayList(), Lists.newArrayList(tuple), id, "SCAN " + displayName);
+  protected ScanNode(TupleDescriptor tuple, HiveFilter filter, PlanId id, String displayName) {
+    super(Lists.newArrayList(), Lists.newArrayList(tuple), filter, id, "SCAN " + displayName);
     tuple_ = tuple;
   }
 

@@ -18,11 +18,35 @@
 
 package org.apache.hadoop.hive.ql.plan.impala;
 
-public enum IdGenType {
-    SLOT,
-    TUPLE,
-    PLAN,
-    TABLE,
-    FRAGMENT
-};
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class ExprFactory {
+
+  public static Column createExpr(RexNode rexNode) {
+    //XXX: can this be done with the switch?
+    if (rexNode instanceof RexCall) {
+      return new FunctionColumn((RexCall) rexNode);
+    }
+
+    if (rexNode instanceof RexInputRef) {
+      return new SlotRefColumn((RexInputRef) rexNode);
+    }
+
+    if (rexNode instanceof RexLiteral) {
+      return new LiteralColumn((RexLiteral) rexNode);
+    }
+    throw new RuntimeException("RexNode " + rexNode.getClass() + " not supported by ExprFactory yet.");
+    
+/*
+    switch(rexNode.getKind()) {
+      case 
+    }
+*/
+  }
+}

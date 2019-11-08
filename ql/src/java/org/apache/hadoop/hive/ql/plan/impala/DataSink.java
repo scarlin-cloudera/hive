@@ -23,6 +23,7 @@ import org.apache.impala.thrift.TExecStats;
 import org.apache.impala.thrift.TExplainLevel;
 import org.apache.impala.thrift.TExpr;
 import org.apache.impala.thrift.TPlanRootSink;
+import org.apache.impala.thrift.TResultSetMetadata;
 
 
 abstract public class DataSink {
@@ -52,6 +53,7 @@ abstract public class DataSink {
   }
 
   abstract public TDataSink getDerivedTDataSink();
+  abstract public TResultSetMetadata getTResultSetMetadata();
   abstract public String getDerivedExplainString(String prefix, String detailPrefix,
       /*XXX:TQueryOptions queryOptions,*/ TExplainLevel explainLevel);
 }

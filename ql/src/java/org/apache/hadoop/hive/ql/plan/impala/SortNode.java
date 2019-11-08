@@ -24,7 +24,7 @@ import org.apache.impala.thrift.TPlanNode;
 //XXX: keeping so that explain logic works, needs to be filled in or deleted
 public class SortNode extends PlanNode {
   public SortNode() {
-    super(null, null, null, null);
+    super(null, null, null, null, null);
   }
   protected TPlanNode createDerivedTPlanNode() {
     return null;

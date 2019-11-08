@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.calcite.rex.RexNode;
 import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TColumnType;
+import org.apache.impala.thrift.TExprNode;
 import org.apache.impala.thrift.TExprNodeType;
 import org.apache.impala.thrift.TSlotDescriptor;
 
@@ -80,7 +81,13 @@ public abstract class Column implements Comparable<Column> {
     return type_.getTColumnType();
   }  
 
+  public String getTypeName() {
+    return type_.getTypeName();
+  }
+
   public abstract List<Integer> getMaterializedPath();
 
   public abstract TExprNodeType getTExprNodeType();
+
+  public abstract List<TExprNode> getTExprNodeList(TupleDescriptor tupleDesc);
 }

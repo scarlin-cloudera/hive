@@ -20,6 +20,8 @@ package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.List;
 
+import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveFilter;
+
 import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TExecNodePhase;
 import org.apache.impala.thrift.TExecStats;
@@ -56,6 +58,8 @@ public abstract class PlanNode extends TreeNode<PlanNode> {
 
   private final ImmutableList<PipelineMembership> pipelines_;
 
+  private final HiveFilter filter_;
+
   //XXX:
   private final int limit_ = -1;
 
@@ -65,7 +69,7 @@ public abstract class PlanNode extends TreeNode<PlanNode> {
   //XXX:
   private final int avgRowSize_ = 0;
 
-  public PlanNode(List<PlanNode> inputs, List<TupleDescriptor> tuples, PlanId planId, String displayName) {
+  public PlanNode(List<PlanNode> inputs, List<TupleDescriptor> tuples, HiveFilter filter, PlanId planId, String displayName) {
     id_ = planId;
     inputs_ = new ImmutableList.Builder<PlanNode>().addAll(inputs).build();
     displayName_ = displayName;
@@ -74,6 +78,7 @@ public abstract class PlanNode extends TreeNode<PlanNode> {
     //XXX: when we have children, this will need to change
     pipelines_ = new ImmutableList.Builder<PipelineMembership>().add(
         new PipelineMembership(id_, 0, TExecNodePhase.GETNEXT)).build();
+    filter_ = filter;
   }
 
   // Convert this plan node, including all children, to its Thrift representation.
@@ -114,6 +119,8 @@ public abstract class PlanNode extends TreeNode<PlanNode> {
       planNode.addToRow_tuples(tuple.getTupleId());
       planNode.addToNullable_tuples(tuple.isNullable());
     }   
+    
+    planNode.setConjuncts(getConjuncts());
     /*
     for (Expr e: conjuncts_) {
       planNode.addToConjuncts(e.treeToThrift());
@@ -132,16 +139,6 @@ public abstract class PlanNode extends TreeNode<PlanNode> {
       planNode.addToPipelines(pipe.toThrift());
     }   
     return planNode;
-  }
-
-  public TResultSetMetadata getTResultSetMetadata() {
-    TResultSetMetadata resultSetMetadata = new TResultSetMetadata();
-    for (TupleDescriptor tuple : tuples_) {
-      for (TColumn column : tuple.getTColumns()) {
-        resultSetMetadata.addToColumns(column);
-      }
-    }
-    return resultSetMetadata;
   }
 
   public List<TupleDescriptor> getTupleDescriptors() {
@@ -206,6 +203,10 @@ public abstract class PlanNode extends TreeNode<PlanNode> {
       result.addAll(tuple.getSlotDescriptors());
     }
     return result;
+  }
+
+  public PlanId getId() {
+    return id_;
   }
 
   public String getExplainString(String rootPrefix, String prefix,
@@ -338,5 +339,17 @@ public abstract class PlanNode extends TreeNode<PlanNode> {
   protected String getOffsetExplainString(String prefix) {
     return "";
   }
-    
+
+  private List<TExpr> getConjuncts() {
+    if (filter_ == null) {
+      return ImmutableList.of();
+    }
+    //XXX: only handles 1 level of expression (no ands yet)
+    TExpr expr = new TExpr();
+    Column filterColumn = ExprFactory.createExpr(filter_.getCondition());
+    //XXX: this is going to be a problem later
+    assert tuples_.size() == 1;
+    expr.setNodes(filterColumn.getTExprNodeList(tuples_.get(0)));
+    return ImmutableList.of(expr);
+  } 
 }

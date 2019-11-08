@@ -38,7 +38,6 @@ public class SlotRefColumn extends Column implements Comparable<Column> {
 
   private final RexInputRef inputRef_;
 
-  private final ColumnDescriptor columnDesc_;
 
   private static final Logger LOG = LoggerFactory.getLogger(SlotRefColumn.class);
 
@@ -47,9 +46,13 @@ public class SlotRefColumn extends Column implements Comparable<Column> {
     // if for some reason this needs changing, be aware of this
     super(inputRef, tableName + "." + columnDesc.getName());
     inputRef_ = inputRef;
-    columnDesc_ = columnDesc;
   }
  
+  public SlotRefColumn(RexInputRef inputRef) {
+    super(inputRef, inputRef.getName());
+    inputRef_ = inputRef;
+  }
+
   public int getIndex() {
     System.out.println("SJC: GETTING INDEX " + inputRef_.getIndex() + " FOR COLUMN " + getName());
     return inputRef_.getIndex();
@@ -65,13 +68,27 @@ public class SlotRefColumn extends Column implements Comparable<Column> {
     return TExprNodeType.SLOT_REF;
   }
 
-  public TExprNode getTExprNode(SlotId id) {
+  public TExprNode getTExprNode(int id) {
     TExprNode expr = new TExprNode();
     expr.setNode_type(getTExprNodeType());
     expr.setType(getTColumnType());
     expr.setNum_children(0);
     expr.setIs_constant(false);
-    expr.setSlot_ref(new TSlotRef(id.asInt()));
+    expr.setSlot_ref(new TSlotRef(id));
     return expr;
+  }
+
+  public RexInputRef getInputRef() {
+    return inputRef_;
+  }
+
+  @Override
+  public List<TExprNode> getTExprNodeList(TupleDescriptor tupleDesc) {
+    //XXX: We may want to revisit this.  This logic is assuming that the indexes
+    // created for the SlotDescriptors are in the sequence of 0,1,2,... (in order and
+    // incrementing by 1).  This is how they are created in TupleDescriptor.  If this
+    // proves to be false, we should create a map that mpas the index to the right slotdescriptor
+    SlotDescriptor slotDesc = tupleDesc.getSlotDescriptor(inputRef_);
+    return ImmutableList.of(getTExprNode(slotDesc.getIdInt()));
   }
 }

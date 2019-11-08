@@ -80,7 +80,7 @@ public class SlotDescriptor {
     switch(column_.getTExprNodeType()) {
       case SLOT_REF:
         SlotRefColumn slotColumn = (SlotRefColumn) column_;
-        return slotColumn.getTExprNode(slotId_);
+        return slotColumn.getTExprNode(slotId_.asInt());
       default:
         throw new RuntimeException("Column type not supported: " + column_.getTExprNodeType());
     }
@@ -88,5 +88,13 @@ public class SlotDescriptor {
 
   public String getName() {
     return column_.getName();
+  }
+
+  public int getSlotIdx() {
+    return slotIdx_;
+  }
+
+  public int getIdInt() {
+    return slotId_.asInt();
   }
 }

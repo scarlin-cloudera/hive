@@ -252,7 +252,7 @@ import org.apache.hadoop.hive.ql.plan.ExprNodeDescUtils;
 import org.apache.hadoop.hive.ql.plan.GroupByDesc;
 import org.apache.hadoop.hive.ql.plan.HiveOperation;
 import org.apache.hadoop.hive.ql.plan.SelectDesc;
-import org.apache.hadoop.hive.ql.plan.impala.PlanRootSink;
+import org.apache.hadoop.hive.ql.plan.impala.DataSink;
 import org.apache.hadoop.hive.ql.plan.impala.ScanNode;
 import org.apache.hadoop.hive.ql.plan.mapper.EmptyStatsSource;
 import org.apache.hadoop.hive.ql.plan.mapper.StatsSource;
@@ -478,11 +478,16 @@ public class CalcitePlanner extends SemanticAnalyzer {
               for (ScanNode scanNode : sjcSpecial.getScanRangeLocations().getScanNodes()) {
                 System.out.println("SJC: SCAN NODE SPEC IS " + sjcSpecial.getScanRangeLocations().getScanRangeSpec(scanNode));
               }
-              System.out.println("SJC: TRESULTSETMETADATA IS " + sjcSpecial.getRootPlanNode().getTResultSetMetadata());
-              PlanRootSink planRootSink = new PlanRootSink(sjcSpecial.getRootPlanNode());
+              DataSink planRootSink = sjcSpecial.getDataSink();
               System.out.println("SJC: PLAN ROOT DATA SINK IS " + planRootSink.getTDataSink());
+              System.out.println("SJC: TRESULTSETMETADATA IS " + planRootSink.getTResultSetMetadata());
               System.out.println("SJC: EXPLAIN ROOT NODE\n" + sjcSpecial.getRootPlanNode().getExplainString("", "", TExplainLevel.VERBOSE));
               System.out.println("SJC: EXPLAIN PLAN ROOT SINK\n" + planRootSink.getExplainString("", "|  ", TExplainLevel.VERBOSE));
+
+              System.out.println("SJC: FINAL PLAN!!!!!!!");
+              System.out.println("SJC: PLAN ROOT DATA SINK IS " + sjcSpecial.getExecRequest());
+              System.out.println("SJC: FINAL EXPLAIN PLAN!!!!!!!");
+              System.out.println("SJC: EXPLAIN PLAN ROOT SINK\n" + sjcSpecial.getPlanExecInfo().getExplainString(TExplainLevel.VERBOSE));
             } catch (Exception e) {
               System.out.println("SJC: IMPALA CONVERSION DID NOT RUN");
               e.printStackTrace();

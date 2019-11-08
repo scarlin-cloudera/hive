@@ -30,6 +30,7 @@ import org.apache.impala.thrift.TColumnDescriptor;
 import org.apache.impala.thrift.TNetworkAddress;
 import org.apache.impala.thrift.TScanRangeSpec;
 import org.apache.impala.thrift.TTableDescriptor;
+import org.apache.impala.thrift.TTableName;
 
 
 import com.google.common.collect.ImmutableList;
@@ -115,6 +116,18 @@ public abstract class TableDescriptor {
       columns.add(column.toThrift());
     }
     return columns;
+  }
+
+  //XXX:
+  public boolean isMissingStats() {
+    return true;
+  }
+
+  public TTableName getTTableName() {
+    TTableName tableName = new TTableName();
+    tableName.setDb_name(dbName_);
+    tableName.setTable_name(tableName_);
+    return tableName;
   }
 
 }

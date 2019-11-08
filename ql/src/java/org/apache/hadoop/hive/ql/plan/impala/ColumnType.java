@@ -62,9 +62,12 @@ public class ColumnType {
       return TPrimitiveType.INT;
     case BIGINT:
       return TPrimitiveType.BIGINT;
-    //XXX: CHAR IS GONNA BE A PROBLEM
+    //XXX: CHAR MIGHT BE A PROBLEM
+    case CHAR:
     case VARCHAR:
       return TPrimitiveType.STRING;
+    case BOOLEAN:
+      return TPrimitiveType.BOOLEAN;
     default:
       //XXX: THIS IS WRONG!
       return TPrimitiveType.INT;
@@ -85,5 +88,9 @@ public class ColumnType {
     default:
       throw new RuntimeException("TPrimitiveType " + typeName_ + "  not supported yet.");
     }
+  }
+
+  public String getTypeName() {
+    return getTPrimitiveType(typeName_).toString();
   }
 }

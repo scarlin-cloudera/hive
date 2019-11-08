@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hive.ql.plan.impala;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +48,7 @@ public class TupleDescriptor {
   //TODO:
   private final int numNullBytes_;
   private final TableDescriptor tableDescriptor_;
-  private final List<SlotDescriptor> slotDescriptors_;
+  private final Map<RexInputRef, SlotDescriptor> slotDescriptors_;
 
   //TODO: 
   private final List<Integer> tuplePaths_ = ImmutableList.of();
@@ -61,13 +62,13 @@ public class TupleDescriptor {
     }
   }
 
-  public TupleDescriptor(HiveTableScan tableScan, List<RexNode> fields, TupleId id,
+  public TupleDescriptor(HiveTableScan tableScan, List<RexInputRef> fields, TupleId id,
       Map<IdGenType, IdGenerator<?>> idGenerators) {
     IdGenerator<TableId> tableIdGen = (IdGenerator<TableId>) idGenerators.get(IdGenType.TABLE);
     IdGenerator<SlotId> slotIdGen = (IdGenerator<SlotId>) idGenerators.get(IdGenType.SLOT);
     tupleId_ = id;
     tableDescriptor_ = new HdfsTableDescriptor(tableScan, tableIdGen.getNextId());
-    List<Column> columns = createColumns(fields);
+    List<SlotRefColumn> columns = createColumns(fields);
     byteSize_ = getTupleSize(columns);
     numNullBytes_ = (columns.size() - 1) / 8 + 1;
     slotDescriptors_ = createSlotDescriptors(columns, slotIdGen);
@@ -88,14 +89,18 @@ public class TupleDescriptor {
 
   public List<TColumn> getTColumns() {
     List<TColumn> columns = Lists.newArrayList();
-    for (SlotDescriptor slotDesc : slotDescriptors_) {
+    for (SlotDescriptor slotDesc : slotDescriptors_.values()) {
       columns.add(slotDesc.getTColumn());
     }
     return columns;
   }
 
-  public List<SlotDescriptor> getSlotDescriptors() {
-    return slotDescriptors_;
+  public SlotDescriptor getSlotDescriptor(RexInputRef inputRef) {
+    return slotDescriptors_.get(inputRef);
+  }
+
+  public Collection<SlotDescriptor> getSlotDescriptors() {
+    return slotDescriptors_.values();
   }
 
   public HiveTableScan getTableScan() {
@@ -119,24 +124,25 @@ public class TupleDescriptor {
     return tableDescriptor_.getPartitionExplainString(detailPrefix);
   }
 
-  private List<SlotDescriptor> createSlotDescriptors(List<Column> columns, IdGenerator<SlotId> slotIdGen) {
-    List<SlotDescriptor> slotDescriptors = Lists.newArrayList();
-    Map<Column, SortedColumnInfo> sortedColumnInfoMap = createSortedColumnInfoMap(columns);
-    for (Column column : columns) {
+  private Map<RexInputRef, SlotDescriptor> createSlotDescriptors(List<SlotRefColumn> columns, IdGenerator<SlotId> slotIdGen) {
+    Map<RexInputRef, SlotDescriptor> slotDescriptors = Maps.newLinkedHashMap();
+    Map<SlotRefColumn, SortedColumnInfo> sortedColumnInfoMap = createSortedColumnInfoMap(columns);
+    for (SlotRefColumn column : columns) {
       SortedColumnInfo info = sortedColumnInfoMap.get(column);
       int nullIdx = byteSize_ + info.position_ / 8;
-      slotDescriptors.add(new SlotDescriptor(column, tupleId_.asInt(), info.position_, nullIdx, info.byteOffset_, slotIdGen.getNextId()));
+      slotDescriptors.put(column.getInputRef(),
+          new SlotDescriptor(column, tupleId_.asInt(), info.position_, nullIdx, info.byteOffset_, slotIdGen.getNextId()));
     }
     return slotDescriptors;
   }
 
-  private Map<Column, SortedColumnInfo> createSortedColumnInfoMap(List<Column> columns) {
-    Map<Column, SortedColumnInfo> result = Maps.newHashMap();
-    List<Column> columnsCopy = Lists.newArrayList(columns);
+  private Map<SlotRefColumn, SortedColumnInfo> createSortedColumnInfoMap(List<SlotRefColumn> columns) {
+    Map<SlotRefColumn, SortedColumnInfo> result = Maps.newHashMap();
+    List<SlotRefColumn> columnsCopy = Lists.newArrayList(columns);
     Collections.sort(columnsCopy);
     int slotIdx = 0;
     int slotOffset = 0;
-    for (Column column : columnsCopy) {
+    for (SlotRefColumn column : columnsCopy) {
       result.put(column, new SortedColumnInfo(slotIdx, slotOffset));
       slotIdx++;
       slotOffset += column.getSlotSize();
@@ -144,22 +150,19 @@ public class TupleDescriptor {
     return result;
   }
 
-  private List<Column> createColumns(List<RexNode> fields) {
-    List<Column> columns = Lists.newArrayList();
-    for (RexNode field : fields) {
-      //XXX: This will not be true once we have expressions.
-      assert field instanceof RexInputRef;
-      RexInputRef inputRef = (RexInputRef) field;
-      System.out.println("SJC: PRE SORT, FIELD = " + inputRef.getName() + ", " + field.getType().getSqlTypeName());
+  private List<SlotRefColumn> createColumns(List<RexInputRef> fields) {
+    List<SlotRefColumn> columns = Lists.newArrayList();
+    for (RexInputRef inputRef : fields) {
+      System.out.println("SJC: PRE SORT, FIELD = " + inputRef.getName() + ", " + inputRef.getType().getSqlTypeName());
       columns.add(new SlotRefColumn(inputRef, tableDescriptor_.getFullTableName(),
           tableDescriptor_.getColumnDescriptor(inputRef.getIndex())));
     }
     return columns;
   }
 
-  private int getTupleSize(List<Column> columns) {
+  private int getTupleSize(List<SlotRefColumn> columns) {
     int tupleSize = 0;
-    for (Column column : columns) {
+    for (SlotRefColumn column : columns) {
       tupleSize += column.getSlotSize();
     }
     return tupleSize;

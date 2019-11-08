@@ -22,11 +22,14 @@ import java.util.List;
 
 import org.apache.impala.thrift.TDescriptorTable;
 import org.apache.impala.thrift.TDescriptorTableSerialized;
+import org.apache.impala.thrift.TTableName;
 
 import org.apache.thrift.TBase;
-import org.apache.thrift.TSerializer;
 import org.apache.thrift.TException;
+import org.apache.thrift.TSerializer;
 import org.apache.thrift.protocol.TBinaryProtocol;
+
+import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,6 +72,16 @@ public class DescriptorTable {
 
   public List<TableDescriptor> getTableDescriptors() {
     return tableDescriptors_;
+  }
+
+  public List<TTableName> getTablesMissingStats() {
+    List<TTableName> tables = Lists.newArrayList();
+    for (TableDescriptor table : tableDescriptors_) {
+      if (table.isMissingStats()) {
+        tables.add(table.getTTableName());
+      }
+    }
+    return tables;
   }
 
   /**
