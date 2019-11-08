@@ -433,8 +433,7 @@ public class CalcitePlanner extends SemanticAnalyzer {
     boolean skipCalcitePlan = false;
     System.out.println("SJC: IN GENOPTREE");
     // TODO: enable once we are sending plan to IMPALA
-    //boolean runImpala = runImpala = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).equals("impala");
-    boolean runImpala = true;
+    boolean runImpala = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).equals("impala");
     if (!runCBO) {
       skipCalcitePlan = true;
     } else {
