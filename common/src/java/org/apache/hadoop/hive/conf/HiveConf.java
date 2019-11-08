@@ -3762,7 +3762,7 @@ public class HiveConf extends Configuration {
 
     HIVE_EXECUTION_MODE("hive.execution.mode", "container", new StringSet("container", "llap"),
         "Chooses whether query fragments will run in container or in llap"),
-
+    HIVE_IMPALA_ADDRESS("hive.impala.address", "localhost:21050", "Address for Impala execution engine."),
     HIVE_JAR_DIRECTORY("hive.jar.directory", null,
         "This is the location hive in tez mode will look for to find a site wide \n" +
         "installed hive instance."),
