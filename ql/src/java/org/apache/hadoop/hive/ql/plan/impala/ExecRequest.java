@@ -166,6 +166,7 @@ public class ExecRequest {
 
   public static TQueryCtx getQueryCtx(HiveImpalaConverter converter) {
     TQueryCtx queryCtx = new TQueryCtx();
+    queryCtx.setClient_request(getClientRequest());
     //XXX:
 //    queryCtx.setSession();
     /*session:TSessionState(session_id:TUniqueId(hi:-1347751261530967742, lo:-7952852071358192240), session_type:BEESWAX, database:sjc_db, connected_user:vagrant, network_address:TNetworkAddress(hostname:::1, port:35318), kudu_latest_observed_ts:0)*/
@@ -199,5 +200,13 @@ public class ExecRequest {
  redacted_stmt:select * from tbl2)*/
     clientRequest.setQuery_options(getQueryOptions());
     return clientRequest;
+  }
+
+  private long convertByteArrayToLong(byte[] byteArray, int startIdx) {
+    long value = 0;
+    for (int i = startIdx; i < startIdx + 8; i++) {
+      value = (value << 8) + (byteArray[i] & 0xff);
+    }
+    return value;
   }
 }
