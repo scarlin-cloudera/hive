@@ -103,9 +103,9 @@ public class TRuntimeProfileNodeMetadata extends org.apache.thrift.TUnion<TRunti
   public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
   static {
     Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
-    tmpMap.put(_Fields.PLAN_NODE_ID, new org.apache.thrift.meta_data.FieldMetaData("plan_node_id", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.PLAN_NODE_ID, new org.apache.thrift.meta_data.FieldMetaData("plan_node_id", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32        , "TPlanNodeId")));
-    tmpMap.put(_Fields.DATA_SINK_ID, new org.apache.thrift.meta_data.FieldMetaData("data_sink_id", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+    tmpMap.put(_Fields.DATA_SINK_ID, new org.apache.thrift.meta_data.FieldMetaData("data_sink_id", org.apache.thrift.TFieldRequirementType.OPTIONAL, 
         new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.I32        , "TDataSinkId")));
     metaDataMap = Collections.unmodifiableMap(tmpMap);
     org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(TRuntimeProfileNodeMetadata.class, metaDataMap);

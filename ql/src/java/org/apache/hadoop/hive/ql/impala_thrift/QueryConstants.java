@@ -34,8 +34,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @SuppressWarnings({"cast", "rawtypes", "serial", "unchecked"})
-public class ImpalaInternalServiceConstants {
+public class QueryConstants {
 
-  public static final int INVALID_PLAN_NODE_ID = -1;
+  public static final int NUM_NODES_ALL = 0;
+
+  public static final int NUM_NODES_ALL_RACKS = -1;
 
 }

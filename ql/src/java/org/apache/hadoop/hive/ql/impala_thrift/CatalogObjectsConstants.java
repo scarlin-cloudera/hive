@@ -38,10 +38,10 @@ public class CatalogObjectsConstants {
 
   public static final Map<String,THdfsCompression> COMPRESSION_MAP = new HashMap<String,THdfsCompression>();
   static {
-    COMPRESSION_MAP.put("gzip", org.apache.impala.thrift.THdfsCompression.GZIP);
     COMPRESSION_MAP.put("", org.apache.impala.thrift.THdfsCompression.NONE);
     COMPRESSION_MAP.put("none", org.apache.impala.thrift.THdfsCompression.NONE);
     COMPRESSION_MAP.put("deflate", org.apache.impala.thrift.THdfsCompression.DEFAULT);
+    COMPRESSION_MAP.put("gzip", org.apache.impala.thrift.THdfsCompression.GZIP);
     COMPRESSION_MAP.put("bzip2", org.apache.impala.thrift.THdfsCompression.BZIP2);
     COMPRESSION_MAP.put("snappy", org.apache.impala.thrift.THdfsCompression.SNAPPY);
   }
