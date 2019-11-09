@@ -54,13 +54,17 @@ public class PlanFragment {
     //XXX: hardcoded
     planFragment.setPartition(getUnpartitionedDataPartition());
     //XXX: hardcoded
-    planFragment.setMin_mem_reservation_bytes(8192);
+    //XXX: increased by JFS
+    planFragment.setMin_mem_reservation_bytes(1048576);
     //XXX: hardcoded
-    planFragment.setInitial_mem_reservation_total_claims(8192);
+    planFragment.setInitial_mem_reservation_total_claims(1048576);
     //XXX: hardcoded
     planFragment.setRuntime_filters_reservation_bytes(0);
     //XXX: hardcoded
     planFragment.setThread_reservation(2);
+
+    //XXX: no idea if this is right
+    planFragment.setOutput_sink(outputSink_.getDerivedTDataSink());
     return planFragment;
   }
 

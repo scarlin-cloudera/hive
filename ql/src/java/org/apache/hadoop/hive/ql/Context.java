@@ -67,6 +67,7 @@ import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.impala.thrift.TExecRequest;
 
 
 /**
@@ -170,6 +171,16 @@ public class Context {
 
   // Load data rewrite
   private Table tempTableForLoad;
+
+  TExecRequest execRequest;
+
+  public void setExecRequest(TExecRequest execRequest) {
+    this.execRequest = execRequest;
+  }
+
+  public TExecRequest getExecRequest() {
+    return execRequest;
+  }
 
   public void setOperation(Operation operation) {
     this.operation = operation;

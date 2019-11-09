@@ -63,6 +63,12 @@ public class PlanRootSink extends DataSink {
     for (RexNode field : project_.getProjects()) {
       System.out.println("SJC: PRINTING PROJECT IN ROOT: " + field);
     }
+
+    // XXX hardcoded
+    TExecStats stats = new TExecStats();
+    stats.setCardinality(10);
+
+    dataSink.setEstimated_stats(stats);
     return dataSink;
   }
 

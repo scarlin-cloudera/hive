@@ -18,13 +18,21 @@
 package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.io.Serializable;
+import org.apache.impala.thrift.TExecRequest;
 
 public class ImpalaWork implements Serializable {
     String query;
+    TExecRequest execRequest;
+
     public ImpalaWork(String query) {
         this.query = query;
     }
+    public ImpalaWork(TExecRequest execRequest, String query) {
+        this.execRequest = execRequest;
+        this.query = query;
+    }
 
+    public TExecRequest getExecRequest() { return execRequest; }
     public String getQuery() {
         return query;
     }

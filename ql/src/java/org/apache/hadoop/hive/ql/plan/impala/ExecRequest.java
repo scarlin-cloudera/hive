@@ -44,10 +44,16 @@ import org.apache.impala.thrift.TQueryExecRequest;
 import org.apache.impala.thrift.TQueryOptions;
 import org.apache.impala.thrift.TStmtType;
 import org.apache.impala.thrift.TTransactionalType;
+import org.apache.impala.thrift.TUniqueId;
+import org.apache.impala.thrift.TSessionState;
+import org.apache.impala.thrift.TSessionType;
+import org.apache.impala.thrift.TNetworkAddress;
 
 import com.google.common.collect.ImmutableList;
 
-public class ExecRequest {
+import java.util.ArrayList;
+
+    public class ExecRequest {
   public static TExecRequest getExecRequest(HiveImpalaConverter converter) {
     TExecRequest execRequest = new TExecRequest();
     execRequest.setStmt_type(TStmtType.QUERY);
@@ -56,6 +62,7 @@ public class ExecRequest {
     execRequest.setResult_set_metadata(converter.getDataSink().getTResultSetMetadata());
     execRequest.setQuery_exec_request(getQueryExecRequest(converter));
     execRequest.setUser_has_profile_access(true);
+    execRequest.setAnalysis_warnings(new ArrayList<>());
     return execRequest;
   }
   
@@ -176,6 +183,25 @@ public class ExecRequest {
     queryCtx.setPid(9212);
     //XXX: queryCtx.setCoord_address();
     //XXX: queryCtx.setCoord_krpc_address();
+
+    TUniqueId uniqueId = new TUniqueId();
+
+    org.apache.impala.thrift.TSessionState sessionState = new TSessionState();
+    sessionState.setConnected_user("hiveServer-2");
+    sessionState.setDatabase("default");
+    sessionState.setSession_id(uniqueId);
+    sessionState.setSession_type(TSessionType.HIVESERVER2);
+
+    TNetworkAddress addr = new TNetworkAddress();
+    addr.setHostname("localhost");
+    addr.setPort(1984);
+
+    sessionState.setNetwork_address(addr);
+
+    queryCtx.setSession(sessionState);
+    //uniqueId.setHi(0xBEEF);
+    //uniqueId.setLo(0xF00F);
+    queryCtx.setQuery_id(uniqueId);
     queryCtx.setTables_missing_stats(converter.getDescriptorTable().getTablesMissingStats());
     queryCtx.setDisable_spilling(false);
     queryCtx.setSnapshot_timestamp(-1);
@@ -189,7 +215,19 @@ public class ExecRequest {
     queryCtx.setTrace_resource_usage(false);
     queryCtx.setStatus_report_interval_ms(5000);
     queryCtx.setStatus_report_max_retry_s(600);
-    
+
+    // XXX: hardcoded
+    TNetworkAddress cordAddr = new TNetworkAddress();
+    cordAddr.setHostname("127.0.0.1");
+    cordAddr.setPort(22000);
+    queryCtx.setCoord_address(cordAddr);
+
+    // XXX: hardcoded
+    TNetworkAddress krpcCordAddr = new TNetworkAddress();
+    krpcCordAddr.setHostname("127.0.0.1");
+    krpcCordAddr.setPort(27000);
+    queryCtx.setCoord_krpc_address(krpcCordAddr);
+
     return queryCtx;
   }
 
@@ -198,6 +236,8 @@ public class ExecRequest {
 //XXX:
 /*client_request:TClientRequest(stmt:select * from tbl2,
  redacted_stmt:select * from tbl2)*/
+
+    clientRequest.setStmt("select * from testjfs;");
     clientRequest.setQuery_options(getQueryOptions());
     return clientRequest;
   }

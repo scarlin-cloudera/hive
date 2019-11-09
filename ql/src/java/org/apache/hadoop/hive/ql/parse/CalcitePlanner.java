@@ -432,7 +432,6 @@ public class CalcitePlanner extends SemanticAnalyzer {
     Operator sinkOp = null;
     boolean skipCalcitePlan = false;
     System.out.println("SJC: IN GENOPTREE");
-    // TODO: enable once we are sending plan to IMPALA
     boolean runImpala = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).equals("impala");
     if (!runCBO) {
       skipCalcitePlan = true;
@@ -488,6 +487,7 @@ public class CalcitePlanner extends SemanticAnalyzer {
               System.out.println("SJC: PLAN ROOT DATA SINK IS " + sjcSpecial.getExecRequest());
               System.out.println("SJC: FINAL EXPLAIN PLAN!!!!!!!");
               System.out.println("SJC: EXPLAIN PLAN ROOT SINK\n" + sjcSpecial.getPlanExecInfo().getExplainString(TExplainLevel.VERBOSE));
+              this.ctx.setExecRequest(sjcSpecial.getExecRequest());
             } catch (Exception e) {
               System.out.println("SJC: IMPALA CONVERSION DID NOT RUN");
               e.printStackTrace();

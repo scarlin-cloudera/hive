@@ -21,6 +21,9 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hive.service.rpc.thrift.*;
 import org.apache.impala.thrift.ImpalaHiveServer2Service;
+import org.apache.impala.thrift.TExecutePlannedStatementReq;
+import org.apache.impala.thrift.TExecRequest;
+
 
 public class ImpalaSession {
     private final ImpalaConnection connection;
@@ -47,6 +50,30 @@ public class ImpalaSession {
 
         // check
         return resp.getResults();
+    }
+
+    public TOperationHandle executePlan(String sql, TExecRequest execRequest) throws HiveException {
+        Preconditions.checkNotNull(client);
+        Preconditions.checkNotNull(sessionHandle);
+
+        TExecuteStatementReq statementRequest = new TExecuteStatementReq();
+        statementRequest.setSessionHandle(sessionHandle);
+        statementRequest.setRunAsync(true);
+        statementRequest.setStatement(sql);
+
+        TExecutePlannedStatementReq req2 = new TExecutePlannedStatementReq();
+
+        req2.setPlan(execRequest);
+        req2.setStatementReq(statementRequest);
+        TExecuteStatementResp resp;
+        try {
+            // check
+            resp =         client.ExecutePlannedStatement(req2);
+        } catch (Exception e) {
+            throw new HiveException(e);
+        }
+
+        return resp.getOperationHandle();
     }
 
     public TOperationHandle execute(String sql) throws HiveException {

@@ -59,7 +59,7 @@ public class ImpalaTask extends Task<ImpalaWork> {
         try {
 
             session.open();
-            opHandle = session.execute(work.getQuery());
+            opHandle = session.executePlan(work.getQuery(), work.getExecRequest());
             rc = 0;
         } catch (Exception e) {
             setException(e);
