@@ -62,13 +62,12 @@ public class ImpalaSession {
         statementRequest.setStatement(sql);
 
         TExecutePlannedStatementReq req2 = new TExecutePlannedStatementReq();
-
         req2.setPlan(execRequest);
         req2.setStatementReq(statementRequest);
         TExecuteStatementResp resp;
         try {
             // check
-            resp =         client.ExecutePlannedStatement(req2);
+            resp = client.ExecutePlannedStatement(req2);
         } catch (Exception e) {
             throw new HiveException(e);
         }
@@ -102,7 +101,6 @@ public class ImpalaSession {
         client = connection.getClient();
 
         TOpenSessionReq req = new TOpenSessionReq();
-
         // TODO: replace with real user
         req.setUsername("hive-server2");
         // This is to force Impala to send back row oriented data (Anything less than V6 (above returns columnar)

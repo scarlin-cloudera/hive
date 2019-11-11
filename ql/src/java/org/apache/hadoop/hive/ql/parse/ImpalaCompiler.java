@@ -58,7 +58,7 @@ public class ImpalaCompiler extends TaskCompiler {
             throws SemanticException {
         LOG.info("generateTaskTree");
         rootTasks.add(TaskFactory.get(new ImpalaWork(pCtx.getContext().getExecRequest(),
-                pCtx.getQueryState().getQueryString())));
+                pCtx.getQueryState().getQueryString(), pCtx.getFetchTask())));
     }
 
     @Override

@@ -25,7 +25,9 @@
 
 package org.apache.hadoop.hive.ql.plan.impala;
 
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.optimizer.calcite.translator.HiveImpalaConverter;
+import org.apache.hadoop.hive.ql.session.SessionState;
 import org.apache.impala.thrift.TClientRequest;
 import org.apache.impala.thrift.TExecRequest;
 import org.apache.impala.thrift.TExplainLevel;
@@ -224,7 +226,10 @@ import java.util.ArrayList;
 
     // XXX: hardcoded
     TNetworkAddress krpcCordAddr = new TNetworkAddress();
-    krpcCordAddr.setHostname("127.0.0.1");
+
+    // XXX: Remove HiveConf when cleaned up
+    String krpcHostIP = SessionState.get().getConf().getVar(HiveConf.ConfVars.IMPALA_KRPC_ADDRESS);
+    krpcCordAddr.setHostname(krpcHostIP);
     krpcCordAddr.setPort(27000);
     queryCtx.setCoord_krpc_address(krpcCordAddr);
 

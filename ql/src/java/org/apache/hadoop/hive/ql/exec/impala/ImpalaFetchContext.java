@@ -15,27 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hive.ql.plan.impala;
+package org.apache.hadoop.hive.ql.exec.impala;
 
-import java.io.Serializable;
+import org.apache.hive.service.rpc.thrift.TOperationHandle;
 
-import org.apache.hadoop.hive.ql.exec.FetchTask;
-import org.apache.impala.thrift.TExecRequest;
+public class ImpalaFetchContext {
+    private final ImpalaSession session;
+    private final TOperationHandle operationHandle;
 
-public class ImpalaWork implements Serializable {
-    private final String query;
-    private final TExecRequest execRequest;
-    private final FetchTask fetch;
-
-    public ImpalaWork(TExecRequest execRequest, String query, FetchTask fetch) {
-        this.execRequest = execRequest;
-        this.query = query;
-        this.fetch = fetch;
+    ImpalaFetchContext(ImpalaSession session, TOperationHandle operationHandle) {
+        this.session = session;
+        this.operationHandle = operationHandle;
     }
 
-    public TExecRequest getExecRequest() { return execRequest; }
-    public String getQuery() {
-        return query;
+    public ImpalaSession getSession() {
+        return session;
     }
-    public FetchTask getFetch() { return fetch; }
+    public TOperationHandle getOperationHandle() {
+        return operationHandle;
+    }
 }

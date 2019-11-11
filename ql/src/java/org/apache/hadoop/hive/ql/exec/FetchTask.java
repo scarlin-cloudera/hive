@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 
+import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.ql.exec.impala.ImpalaFetchOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hive.ql.CompilationOpContext;
@@ -88,7 +90,13 @@ public class FetchTask extends Task<FetchWork> implements Serializable {
             ts.getConf().getAcidOperationalProperties());
       }
       sink = work.getSink();
-      fetch = new FetchOperator(work, job, source, getVirtualColumns(source));
+
+      if (conf.getVar(HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).equals("impala")) {
+        fetch = new ImpalaFetchOperator(work, job, source, getVirtualColumns(source), queryPlan.getResultSchema());
+      } else {
+        fetch = new FetchOperator(work, job, source, getVirtualColumns(source));
+      }
+
       source.initialize(conf, new ObjectInspector[]{fetch.getOutputObjectInspector()});
       totalRows = 0;
       ExecMapper.setDone(false);
@@ -199,4 +207,9 @@ public class FetchTask extends Task<FetchWork> implements Serializable {
   public boolean canExecuteInParallel() {
     return false;
   }
+
+  public FetchOperator getFetchOp() {
+    return fetch;
+  }
+
 }

@@ -22,6 +22,8 @@ import org.apache.hadoop.hive.ql.CompilationOpContext;
 import org.apache.hadoop.hive.ql.DriverContext;
 import org.apache.hadoop.hive.ql.QueryPlan;
 import org.apache.hadoop.hive.ql.QueryState;
+import org.apache.hadoop.hive.ql.exec.FetchOperator;
+import org.apache.hadoop.hive.ql.exec.FetchTask;
 import org.apache.hadoop.hive.ql.exec.Task;
 import org.apache.hadoop.hive.ql.plan.api.StageType;
 import org.apache.hadoop.hive.ql.plan.impala.ImpalaWork;
@@ -59,10 +61,25 @@ public class ImpalaTask extends Task<ImpalaWork> {
         try {
 
             session.open();
-            opHandle = session.executePlan(work.getQuery(), work.getExecRequest());
+            /// XXX only exists for testing purposes
+            if (HiveConf.getVar(conf, HiveConf.ConfVars.IMPALA_EXECUTION_MODE).equals("plan")) {
+                opHandle = session.executePlan(work.getQuery(), work.getExecRequest());
+            } else {
+                opHandle = session.execute(work.getQuery());
+            }
             rc = 0;
         } catch (Exception e) {
             setException(e);
+        }
+
+        if (rc == 0) {
+            FetchTask fetch = work.getFetch();
+            FetchOperator fetchOp = fetch.getFetchOp();
+            if (fetchOp instanceof ImpalaFetchOperator) {
+                //  connection.setQueryHandle(qh);
+                ImpalaFetchOperator impFetchOp = (ImpalaFetchOperator) fetchOp;
+                impFetchOp.setImplalaFetchContext(new ImpalaFetchContext(session, opHandle));
+            }
         }
         return rc;
     }
