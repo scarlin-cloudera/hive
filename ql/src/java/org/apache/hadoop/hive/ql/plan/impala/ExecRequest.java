@@ -56,13 +56,13 @@ import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 
     public class ExecRequest {
-  public static TExecRequest getExecRequest(HiveImpalaConverter converter) {
+  public static TExecRequest getExecRequest(HiveImpalaConverter converter, String queryString) {
     TExecRequest execRequest = new TExecRequest();
     execRequest.setStmt_type(TStmtType.QUERY);
     execRequest.setQuery_options(getQueryOptions());
     //XXX: not putting in access events yet
     execRequest.setResult_set_metadata(converter.getDataSink().getTResultSetMetadata());
-    execRequest.setQuery_exec_request(getQueryExecRequest(converter));
+    execRequest.setQuery_exec_request(getQueryExecRequest(converter, queryString));
     execRequest.setUser_has_profile_access(true);
     execRequest.setAnalysis_warnings(new ArrayList<>());
     return execRequest;
@@ -158,10 +158,10 @@ import java.util.ArrayList;
     return queryOptions;
   }
   
-  public static TQueryExecRequest getQueryExecRequest(HiveImpalaConverter converter) {
+  public static TQueryExecRequest getQueryExecRequest(HiveImpalaConverter converter, String queryString) {
     TQueryExecRequest queryExecRequest = new TQueryExecRequest();
     queryExecRequest.setPlan_exec_info(ImmutableList.of(converter.getPlanExecInfo().toThrift()));
-    queryExecRequest.setQuery_ctx(getQueryCtx(converter));
+    queryExecRequest.setQuery_ctx(getQueryCtx(converter, queryString));
     //XXX: query_id
     queryExecRequest.setQuery_plan(converter.getPlanExecInfo().getExplainString(TExplainLevel.VERBOSE));
     queryExecRequest.setStmt_type(TStmtType.QUERY);
@@ -173,9 +173,9 @@ import java.util.ArrayList;
     return queryExecRequest;
   }
 
-  public static TQueryCtx getQueryCtx(HiveImpalaConverter converter) {
+  public static TQueryCtx getQueryCtx(HiveImpalaConverter converter, String queryString) {
     TQueryCtx queryCtx = new TQueryCtx();
-    queryCtx.setClient_request(getClientRequest());
+    queryCtx.setClient_request(getClientRequest(queryString));
     //XXX:
 //    queryCtx.setSession();
     /*session:TSessionState(session_id:TUniqueId(hi:-1347751261530967742, lo:-7952852071358192240), session_type:BEESWAX, database:sjc_db, connected_user:vagrant, network_address:TNetworkAddress(hostname:::1, port:35318), kudu_latest_observed_ts:0)*/
@@ -236,13 +236,13 @@ import java.util.ArrayList;
     return queryCtx;
   }
 
-  public static TClientRequest getClientRequest() {
+  public static TClientRequest getClientRequest(String queryString) {
     TClientRequest clientRequest = new TClientRequest();
 //XXX:
 /*client_request:TClientRequest(stmt:select * from tbl2,
  redacted_stmt:select * from tbl2)*/
 
-    clientRequest.setStmt("select * from testjfs;");
+    clientRequest.setStmt(queryString);
     clientRequest.setQuery_options(getQueryOptions());
     return clientRequest;
   }

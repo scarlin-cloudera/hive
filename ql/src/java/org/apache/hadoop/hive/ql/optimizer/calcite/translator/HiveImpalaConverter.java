@@ -111,9 +111,10 @@ public class HiveImpalaConverter {
     return planExecInfo_;
   }
 
-  public TExecRequest getExecRequest() {
+  //XXX: need to reorg, shouldn't pass in query string directly
+  public TExecRequest getExecRequest(String queryString) {
     //XXX: change resultsetmetadata
-    return ExecRequest.getExecRequest(this);
+    return ExecRequest.getExecRequest(this, queryString);
   }
 
   private PlanNode dispatch(RelNode rnToProcess, HiveProject project, HiveFilter filter,
