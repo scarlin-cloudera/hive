@@ -86,11 +86,18 @@ public class ImpalaTask extends Task<ImpalaWork> {
 
     @Override
     public StageType getType() {
+        /// XXX maybe add Impala type?
         return StageType.MAPRED;
     }
 
     @Override
     public String getName() {
         return "IMPALA";
+    }
+
+    /// XXX remove once Impala is a StageType
+    @Override
+    public String toString() {
+        return getId() + ":IMPALA";
     }
 }

@@ -40,8 +40,8 @@ import java.util.List;
 
 public class ImpalaFetchOperator extends FetchOperator {
     private transient final InspectableObject inspectable = new InspectableObject();
-    private StructObjectInspector outputInspector = null;
-    private StructObjectInspector impalaResultInspector = null;
+    private final StructObjectInspector outputInspector;
+    private final StructObjectInspector impalaResultInspector;
     private static final Logger LOG = LoggerFactory.getLogger(ImpalaFetchOperator.class);
 
     private ImpalaFetchContext context;
@@ -120,7 +120,7 @@ public class ImpalaFetchOperator extends FetchOperator {
 
             Object convertedValue = ObjectInspectorConverters.getConverter(impalaResultInspector, outputInspector).convert(rowSet.getRows().get(0));
             inspectable.oi = outputInspector;
-            inspectable.o = convertedValue; //rowSet.getRows().get(0);
+            inspectable.o = convertedValue;
         }
 
         return inspectable;

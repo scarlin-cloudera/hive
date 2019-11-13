@@ -488,6 +488,7 @@ public class CalcitePlanner extends SemanticAnalyzer {
               System.out.println("SJC: FINAL EXPLAIN PLAN!!!!!!!");
               System.out.println("SJC: EXPLAIN PLAN ROOT SINK\n" + sjcSpecial.getPlanExecInfo().getExplainString(TExplainLevel.VERBOSE));
               this.ctx.setExecRequest(sjcSpecial.getExecRequest(queryState.getQueryString()));
+              this.ctx.setImpalaConverter(sjcSpecial);
             } catch (Exception e) {
               System.out.println("SJC: IMPALA CONVERSION DID NOT RUN");
               e.printStackTrace();

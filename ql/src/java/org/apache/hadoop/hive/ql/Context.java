@@ -52,6 +52,7 @@ import org.apache.hadoop.hive.ql.lockmgr.HiveLockObj;
 import org.apache.hadoop.hive.ql.lockmgr.HiveTxnManager;
 import org.apache.hadoop.hive.ql.lockmgr.LockException;
 import org.apache.hadoop.hive.ql.metadata.Table;
+import org.apache.hadoop.hive.ql.optimizer.calcite.translator.HiveImpalaConverter;
 import org.apache.hadoop.hive.ql.parse.ASTNode;
 import org.apache.hadoop.hive.ql.parse.ExplainConfiguration;
 import org.apache.hadoop.hive.ql.parse.ExplainConfiguration.AnalyzeState;
@@ -172,7 +173,8 @@ public class Context {
   // Load data rewrite
   private Table tempTableForLoad;
 
-  TExecRequest execRequest;
+  private TExecRequest execRequest;
+  private HiveImpalaConverter impalaConverter;
 
   public void setExecRequest(TExecRequest execRequest) {
     this.execRequest = execRequest;
@@ -180,6 +182,14 @@ public class Context {
 
   public TExecRequest getExecRequest() {
     return execRequest;
+  }
+
+  public HiveImpalaConverter getImpalaConverter() {
+    return impalaConverter;
+  }
+
+  public void setImpalaConverter(HiveImpalaConverter impalaConverter) {
+    this.impalaConverter = impalaConverter;
   }
 
   public void setOperation(Operation operation) {
