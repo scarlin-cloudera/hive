@@ -36,26 +36,42 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ColumnType {
-  private final SqlTypeName typeName_;
+  private final TPrimitiveType primitiveType_;
 
   public ColumnType(SqlTypeName calciteTypeName) {
-    typeName_ = calciteTypeName;
+    primitiveType_ = getTPrimitiveType(calciteTypeName);
+  }
+
+  public ColumnType(String stringTypeName) {
+    primitiveType_ = getTPrimitiveType(stringTypeName);
   }
 
   public TColumnType getTColumnType() {
-    TTypeNode typeNode = new TTypeNode(TTypeNodeType.SCALAR); 
-    typeNode.setScalar_type(getTScalarType(typeName_));
-    List<TTypeNode> typeNodes = Lists.newArrayList(); 
+    TTypeNode typeNode = new TTypeNode(TTypeNodeType.SCALAR);
+    typeNode.setScalar_type(getTScalarType());
+    List<TTypeNode> typeNodes = Lists.newArrayList();
     typeNodes.add(typeNode);
     return new TColumnType(typeNodes);
   }
 
-  private TScalarType getTScalarType(SqlTypeName calciteTypeName) {
-    TScalarType scalarType = new TScalarType(getTPrimitiveType(calciteTypeName));
+  private TScalarType getTScalarType() {
+    TScalarType scalarType = new TScalarType(primitiveType_);
     // TODO do stuff for decimal, char
     return scalarType;
   }
-    
+
+  private TPrimitiveType getTPrimitiveType(String stringTypeName) {
+    if (stringTypeName.equals("int")) {
+      return TPrimitiveType.INT;
+    }
+    if (stringTypeName.equals("string")) {
+      return TPrimitiveType.STRING;
+    }
+
+    //XXX: THIS IS WRONG!
+    return TPrimitiveType.INT;
+  }
+
   private TPrimitiveType getTPrimitiveType(SqlTypeName calciteTypeName) {
     switch (calciteTypeName) {
     case INTEGER:
@@ -76,21 +92,21 @@ public class ColumnType {
   }
 
   // XXX: This info can be found in PrimitiveType in impala
-  public int getSlotSize() { 
-    switch (typeName_) {
+  public int getSlotSize() {
+    switch (primitiveType_) {
     case BIGINT:
       return 8;
-    case INTEGER:
+    case INT:
       return 4;
     //XXX: CHAR IS GONNA BE A PROBLEM
-    case VARCHAR:
+    case STRING:
       return 12;
     default:
-      throw new RuntimeException("TPrimitiveType " + typeName_ + "  not supported yet.");
+      throw new RuntimeException("TPrimitiveType " + primitiveType_ + "  not supported yet.");
     }
   }
 
   public String getTypeName() {
-    return getTPrimitiveType(typeName_).toString();
+    return primitiveType_.toString();
   }
 }

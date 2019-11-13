@@ -111,8 +111,7 @@ public class FunctionColumn extends Column {
     TFunctionName name = new TFunctionName();
     //XXX: hardcoded for builtins, fix this for udfs
     name.setDb_name(IMPALA_BUILTINS);
-    //XXX: DEFINITELY DO NOT HARCDOE THIS!!!
-    name.setFunction_name("eq");
+    name.setFunction_name(BuiltinFuncs.getImpalaOperatorName(functionCall_.getOperator().getName()));
     return name;
   }
 

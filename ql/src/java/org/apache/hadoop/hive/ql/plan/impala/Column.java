@@ -34,8 +34,6 @@ import org.slf4j.LoggerFactory;
 
 public abstract class Column implements Comparable<Column> {
 
-  private final RexNode column_;
-
   private final String name_;
 
   private final ColumnType type_;
@@ -43,9 +41,13 @@ public abstract class Column implements Comparable<Column> {
   private static final Logger LOG = LoggerFactory.getLogger(Column.class);
 
   public Column(RexNode column, String name) {
-    column_ = column;
     name_ = name != null ? name : toString();
     type_ = new ColumnType(column.getType().getSqlTypeName());
+  }
+
+  public Column(String name, String type) {
+    name_ = name;
+    type_ = new ColumnType(type);
   }
 
   public Column(RexNode column) {

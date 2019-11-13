@@ -955,4 +955,8 @@ public class BuiltinFuncs {
     }
     return b.symbol_;
   }
+
+  public static String getImpalaOperatorName(String calciteOpName) {
+    return INSTANCE.myFuncNameMap_.get(calciteOpName);
+  }
 }

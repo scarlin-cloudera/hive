@@ -471,7 +471,7 @@ public class CalcitePlanner extends SemanticAnalyzer {
 
           if (runImpala) {
             try {
-              HiveImpalaConverter sjcSpecial = new HiveImpalaConverter(newPlan);
+              HiveImpalaConverter sjcSpecial = new HiveImpalaConverter(newPlan, resultSchema);
               System.out.println("SJC: ROOT PLAN NODE THRIFT IS " + sjcSpecial.getRootPlanNode().treeToThrift());
               System.out.println("SJC: DESCRIPTOR TABLE THRIFT IS " + sjcSpecial.getDescriptorTable().toThrift());
               for (ScanNode scanNode : sjcSpecial.getScanRangeLocations().getScanNodes()) {

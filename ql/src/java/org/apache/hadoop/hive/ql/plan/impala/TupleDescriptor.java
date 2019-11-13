@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.RexInputRef;
@@ -35,6 +36,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,6 +129,7 @@ public class TupleDescriptor {
   private Map<RexInputRef, SlotDescriptor> createSlotDescriptors(List<SlotRefColumn> columns, IdGenerator<SlotId> slotIdGen) {
     Map<RexInputRef, SlotDescriptor> slotDescriptors = Maps.newLinkedHashMap();
     Map<SlotRefColumn, SortedColumnInfo> sortedColumnInfoMap = createSortedColumnInfoMap(columns);
+    int i = 0;
     for (SlotRefColumn column : columns) {
       SortedColumnInfo info = sortedColumnInfoMap.get(column);
       int nullIdx = byteSize_ + info.position_ / 8;
@@ -152,10 +155,14 @@ public class TupleDescriptor {
 
   private List<SlotRefColumn> createColumns(List<RexInputRef> fields) {
     List<SlotRefColumn> columns = Lists.newArrayList();
+    Set<RexInputRef> usedInputRefs = Sets.newHashSet();
     for (RexInputRef inputRef : fields) {
       System.out.println("SJC: PRE SORT, FIELD = " + inputRef.getName() + ", " + inputRef.getType().getSqlTypeName());
-      columns.add(new SlotRefColumn(inputRef, tableDescriptor_.getFullTableName(),
-          tableDescriptor_.getColumnDescriptor(inputRef.getIndex())));
+      if (!usedInputRefs.contains(inputRef)) {
+        columns.add(new SlotRefColumn(inputRef, tableDescriptor_.getFullTableName(),
+            tableDescriptor_.getColumnDescriptor(inputRef.getIndex())));
+        usedInputRefs.add(inputRef);
+      }
     }
     return columns;
   }

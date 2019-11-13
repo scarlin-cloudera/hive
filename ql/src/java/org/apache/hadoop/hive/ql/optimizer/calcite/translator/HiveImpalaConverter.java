@@ -25,6 +25,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
+import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveFilter;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveProject;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveTableScan;
@@ -73,14 +74,14 @@ public class HiveImpalaConverter {
 
   private final PlanExecInfo planExecInfo_;
 
-  public HiveImpalaConverter(RelNode root) {
+  public HiveImpalaConverter(RelNode root, List<FieldSchema> resultSchema) {
     try {
       Map<IdGenType, IdGenerator<?>> idGenerators = createIdGenerators();
       rootPlanNode_ = dispatch(root, null, null, idGenerators);
       descriptorTable_ = createDescriptorTable(rootPlanNode_);
       scanRangeLocations_  = createScanRangeLocations(rootPlanNode_);
       assert root instanceof HiveProject;
-      planRootSink_ = new PlanRootSink(rootPlanNode_, (HiveProject) root); 
+      planRootSink_ = new PlanRootSink(rootPlanNode_, (HiveProject) root, resultSchema);
       IdGenerator<PlanFragmentId> fragmentIdGen = (IdGenerator<PlanFragmentId>) idGenerators.get(IdGenType.FRAGMENT);
       //XXX: fill in display
       planFragment_ = new PlanFragment(fragmentIdGen.getNextId(), "", rootPlanNode_, planRootSink_);

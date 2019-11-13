@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan.impala;
 import java.util.List;
 
 import org.apache.calcite.rex.RexNode;
+import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveProject;
 import org.apache.impala.thrift.TDataSink;
 import org.apache.impala.thrift.TDataSinkType;
@@ -38,9 +39,12 @@ public class PlanRootSink extends DataSink {
 
   public final HiveProject project_;
 
-  public PlanRootSink(PlanNode rootNode, HiveProject project) {
+  public final List<FieldSchema> resultSchema_;
+
+  public PlanRootSink(PlanNode rootNode, HiveProject project, List<FieldSchema> resultSchema) {
     rootNode_ = rootNode;
     project_ = project;
+    resultSchema_ = resultSchema;
   }
 
   @Override
@@ -49,18 +53,19 @@ public class PlanRootSink extends DataSink {
     dataSink.setType(TDataSinkType.PLAN_ROOT_SINK);
     TPlanRootSink planRootSink = new TPlanRootSink();
     //XXX:
-    planRootSink.setResource_profile(ResourceProfile.invalid().toThrift()); 
+    planRootSink.setResource_profile(ResourceProfile.invalid().toThrift());
     dataSink.setPlan_root_sink(planRootSink);
     //XXX: fill this in
-    dataSink.setLabel(""); 
-    //XXX: this isn't right, we want projects, not slot descriptors
-    for (SlotDescriptor slotDescriptor : rootNode_.getSlotDescriptors()) { 
-      TExpr expr = new TExpr();
-      expr.addToNodes(slotDescriptor.getTExprNode());
-      dataSink.addToOutput_exprs(expr);
-    }
+    dataSink.setLabel("");
 
     for (RexNode field : project_.getProjects()) {
+      TExpr expr = new TExpr();
+      Column c = ExprFactory.createExpr(field);
+      //XXX: assuming one tuple right now
+      assert rootNode_.getTupleDescriptors().size() == 0;
+      expr.setNodes(c.getTExprNodeList(rootNode_.getTupleDescriptors().get(0)));
+      dataSink.addToOutput_exprs(expr);
+
       System.out.println("SJC: PRINTING PROJECT IN ROOT: " + field);
     }
 
@@ -78,21 +83,20 @@ public class PlanRootSink extends DataSink {
     StringBuilder output = new StringBuilder();
     output.append(String.format("%sPLAN-ROOT SINK\n", prefix));
     if (explainLevel.ordinal() >= TExplainLevel.EXTENDED.ordinal()) {
-      List<String> exprNames = getExprNames();
       output.append(detailPrefix + "output exprs: ")
           .append(Joiner.on(", ").join(getExprNames()) + "\n");
       output.append(detailPrefix);
       //XXX:
       output.append(ResourceProfile.invalid().getExplainString());
       output.append("\n");
-    }   
+    }
     return output.toString();
   }
 
-  public List<String> getExprNames() {
+  private List<String> getExprNames() {
     List<String> exprNames = Lists.newArrayList();
-    for (SlotDescriptor slotDescriptor : rootNode_.getSlotDescriptors()) { 
-      exprNames.add(slotDescriptor.getName());
+    for (FieldSchema fieldSchema : resultSchema_) {
+      exprNames.add(fieldSchema.getName());
     }
     return exprNames;
   }
@@ -100,8 +104,9 @@ public class PlanRootSink extends DataSink {
   public TResultSetMetadata getTResultSetMetadata() {
     TResultSetMetadata resultSetMetadata = new TResultSetMetadata();
     //XXX: this isn't right, we want projects, not slot descriptors
-    for (SlotDescriptor slotDescriptor : rootNode_.getSlotDescriptors()) { 
-      resultSetMetadata.addToColumns(slotDescriptor.getTColumn());
+    for (FieldSchema fieldSchema : resultSchema_) {
+      Column c = new FieldSchemaColumn(fieldSchema);
+      resultSetMetadata.addToColumns(c.getTColumn());
     }
     return resultSetMetadata;
   }
