@@ -90,7 +90,6 @@ public class FetchTask extends Task<FetchWork> implements Serializable {
             ts.getConf().getAcidOperationalProperties());
       }
       sink = work.getSink();
-      Context
       if (conf.getVar(HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).equals("impala")
          && queryPlan.getOperation().getOperationName().equals("QUERY")) {
         fetch = new ImpalaFetchOperator(work, job, source, getVirtualColumns(source), queryPlan.getResultSchema());
