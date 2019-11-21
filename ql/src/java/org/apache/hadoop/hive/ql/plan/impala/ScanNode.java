@@ -24,6 +24,7 @@ import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.core.TableScan;
 
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.hadoop.hive.ql.impalafile.ListMap;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveFilter;
 import org.apache.impala.thrift.TNetworkAddress;
@@ -37,9 +38,9 @@ import org.slf4j.LoggerFactory;
 public abstract class ScanNode extends PlanNode {
 
   private final TupleDescriptor tuple_; 
-  protected ScanNode(RelOptCluster cluster, RelTraitSet traitSet,
+  protected ScanNode(RelOptCluster cluster, RelTraitSet traitSet, RelDataType rowType,
       TupleDescriptor tuple, HiveFilter filter, PlanId id, String displayName) {
-    super(cluster, traitSet, Lists.newArrayList(tuple), filter, id, "SCAN " + displayName);
+    super(cluster, traitSet, rowType, Lists.newArrayList(tuple), filter, id, "SCAN " + displayName);
     tuple_ = tuple;
   }
 
