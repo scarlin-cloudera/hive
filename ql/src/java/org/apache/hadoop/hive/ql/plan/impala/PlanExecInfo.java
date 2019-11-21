@@ -48,7 +48,7 @@ public class PlanExecInfo {
 
     for (ScanNode scanNode : scanRangeLocations_.getScanNodes()) {
       planExecInfo.putToPer_node_scan_ranges(
-          scanNode.getId().asInt(), scanRangeLocations_.getScanRangeSpec(scanNode));
+          scanNode.getPlanId().asInt(), scanRangeLocations_.getScanRangeSpec(scanNode));
     }
     return planExecInfo;
   }

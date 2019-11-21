@@ -145,7 +145,7 @@ public class HiveImpalaConverter {
     TupleDescriptor tupleDesc = new TupleDescriptor(scanRel,
         getAllInputRefs(getRexNodes(project, filter)), tupleIdGen.getNextId(), idGenerators);
     //XXX: only support hdfs right now
-    return new HdfsScanNode(tupleDesc, filter, planIdGen.getNextId());
+    return new HdfsScanNode(null, null, tupleDesc, filter, planIdGen.getNextId());
   }
 
   private List<RexNode> getRexNodes(HiveProject project, HiveFilter filter) {

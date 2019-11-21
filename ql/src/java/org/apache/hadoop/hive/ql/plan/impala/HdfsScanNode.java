@@ -20,6 +20,8 @@ package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.List;
 
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.core.TableScan;
 
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveFilter;
@@ -40,8 +42,9 @@ public class HdfsScanNode extends ScanNode {
   //XXX: calculate this
   private final int maxScanRangeNumRows_ = -1;
 
-  public HdfsScanNode(TupleDescriptor tuple, HiveFilter filter, PlanId id) {
-    super(tuple, filter, id, "HDFS");
+  public HdfsScanNode(RelOptCluster cluster, RelTraitSet traitSet,
+      TupleDescriptor tuple, HiveFilter filter, PlanId id) {
+    super(cluster, traitSet, tuple, filter, id, "HDFS");
   }
 
   @Override

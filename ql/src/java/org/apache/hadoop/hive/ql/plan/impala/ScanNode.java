@@ -20,6 +20,8 @@ package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.List;
 
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.core.TableScan;
 
 import org.apache.hadoop.hive.ql.impalafile.ListMap;
@@ -35,8 +37,9 @@ import org.slf4j.LoggerFactory;
 public abstract class ScanNode extends PlanNode {
 
   private final TupleDescriptor tuple_; 
-  protected ScanNode(TupleDescriptor tuple, HiveFilter filter, PlanId id, String displayName) {
-    super(Lists.newArrayList(), Lists.newArrayList(tuple), filter, id, "SCAN " + displayName);
+  protected ScanNode(RelOptCluster cluster, RelTraitSet traitSet,
+      TupleDescriptor tuple, HiveFilter filter, PlanId id, String displayName) {
+    super(cluster, traitSet, Lists.newArrayList(tuple), filter, id, "SCAN " + displayName);
     tuple_ = tuple;
   }
 

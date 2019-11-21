@@ -20,8 +20,11 @@ package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.List;
 
+import org.apache.calcite.plan.RelOptCluster;
+import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.AbstractRelNode;
+import org.apache.calcite.rel.RelNode;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveFilter;
-
 import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TExecNodePhase;
 import org.apache.impala.thrift.TExecStats;
@@ -41,7 +44,7 @@ import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class PlanNode extends TreeNode<PlanNode> {
+public abstract class PlanNode extends AbstractRelNode {
   protected abstract TPlanNode createDerivedTPlanNode();
 
   protected abstract String getDerivedExplainString(String rootPrefix, String detailPrefix, TExplainLevel detailLevel);
@@ -53,8 +56,6 @@ public abstract class PlanNode extends TreeNode<PlanNode> {
   private final ImmutableList<TupleDescriptor> tuples_;
 
   private final ResourceProfile nodeResourceProfile_;
-
-  private final ImmutableList<PlanNode> inputs_;
 
   private final ImmutableList<PipelineMembership> pipelines_;
 
@@ -69,9 +70,9 @@ public abstract class PlanNode extends TreeNode<PlanNode> {
   //XXX:
   private final int avgRowSize_ = 0;
 
-  public PlanNode(List<PlanNode> inputs, List<TupleDescriptor> tuples, HiveFilter filter, PlanId planId, String displayName) {
+  public PlanNode(RelOptCluster cluster, RelTraitSet traitSet, List<TupleDescriptor> tuples, HiveFilter filter, PlanId planId, String displayName) {
+    super(cluster, traitSet);
     id_ = planId;
-    inputs_ = new ImmutableList.Builder<PlanNode>().addAll(inputs).build();
     displayName_ = displayName;
     tuples_ = new ImmutableList.Builder<TupleDescriptor>().addAll(tuples).build();
     nodeResourceProfile_ = new ResourceProfile(true, 1024*1024, 1024*1024, 1024*1024*8, -1, 1024*1024*8, 1);
@@ -92,8 +93,9 @@ public abstract class PlanNode extends TreeNode<PlanNode> {
     List<TPlanNode> planNodes = Lists.newArrayList();
     planNodes.add(getTPlanNode());
     //XXX: don't call children for exchange?
-    for (PlanNode input : inputs_) {
-      planNodes.addAll(input.getTPlanNodes());
+    for (RelNode input : getInputs()) {
+      assert input instanceof PlanNode;
+      planNodes.addAll(((PlanNode)input).getTPlanNodes());
     }
     return planNodes;
   }
@@ -205,7 +207,7 @@ public abstract class PlanNode extends TreeNode<PlanNode> {
     return result;
   }
 
-  public PlanId getId() {
+  public PlanId getPlanId() {
     return id_;
   }
 
@@ -218,8 +220,12 @@ public abstract class PlanNode extends TreeNode<PlanNode> {
 
     // Do not traverse into the children of an Exchange node to avoid crossing
     // fragment boundaries.
+    //XXX: need to handle inputs
+/*
     boolean traverseChildren = !children_.isEmpty() &&
         !(this instanceof ExchangeNode && detailLevel == TExplainLevel.VERBOSE);
+*/
+    boolean traverseChildren = false;
 
     if (traverseChildren) {
       detailPrefix += "|  ";
@@ -234,11 +240,13 @@ public abstract class PlanNode extends TreeNode<PlanNode> {
     // will be prefixed by detailPrefix.
     expBuilder.append(getDerivedExplainString(rootPrefix, detailPrefix, detailLevel));
 
+/*XXX
     if (detailLevel.ordinal() >= TExplainLevel.STANDARD.ordinal() &&
         !(this instanceof SortNode)) {
       if (limit_ != -1) expBuilder.append(detailPrefix + "limit: " + limit_ + "\n");
       expBuilder.append(getOffsetExplainString(detailPrefix));
     }
+*/
 
     boolean displayCardinality = displayCardinality(detailLevel);
     if (detailLevel.ordinal() >= TExplainLevel.EXTENDED.ordinal()) {
