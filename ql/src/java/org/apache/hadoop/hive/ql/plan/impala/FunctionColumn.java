@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.List;
 
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -36,27 +37,26 @@ import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FunctionColumn extends Column {
+public abstract class FunctionColumn extends Column {
 
-  private final RexCall functionCall_;
+  public static final String IMPALA_BUILTINS = "_impala_builtins";
 
-  private final SqlTypeName returnType_;
-
-  private final List<Column> children_;
-
-  private static final String IMPALA_BUILTINS = "_impala_builtins";
+  private final List<Column> operands_;
 
   private static final Logger LOG = LoggerFactory.getLogger(FunctionColumn.class);
 
-  public FunctionColumn(RexCall functionCall) {
-    super(functionCall, functionCall.getOperator().getName());
-    functionCall_ = functionCall;
-    returnType_ = functionCall.getType().getSqlTypeName();
+  public FunctionColumn(RelDataType returnType, List<RexNode> operands, String functionName) {
+    super(returnType, functionName);
     List<Column> columns = Lists.newArrayList();
-    for (RexNode operand : functionCall.getOperands()) {
+    for (RexNode operand : operands) {
       columns.add(ExprFactory.createExpr(operand));
     }
-    children_ = ImmutableList.<Column>builder().addAll(columns).build();
+    operands_ = ImmutableList.<Column>builder().addAll(columns).build();
+  }
+
+  public FunctionColumn(RelDataType returnType, Column operand, String functionName) {
+    super(returnType, functionName);
+    operands_ = ImmutableList.of(operand);
   }
 
   //XXX: should this only be in slotref?
@@ -66,60 +66,38 @@ public class FunctionColumn extends Column {
   }
 
   @Override
-  public TExprNodeType getTExprNodeType() {
-    return TExprNodeType.FUNCTION_CALL;
-  }
-
-  @Override
   public List<TExprNode> getTExprNodeList(TupleDescriptor tupleDesc) {
     List<TExprNode> result = Lists.newArrayList();
-    TExprNode exprNode = new TExprNode();
+    TExprNode exprNode = getDerivedTExprNode();
     exprNode.setNode_type(getTExprNodeType());
     // column type will be set to the return type
     exprNode.setType(getTColumnType());
-    exprNode.setNum_children(children_.size());
+    exprNode.setNum_children(operands_.size());
     exprNode.setIs_constant(false);
     exprNode.setFn(getTFunction());
     result.add(exprNode);
-    for (Column c : children_) {
+    for (Column c : operands_) {
       System.out.println("SJC: ADDING CHIlD OF TYPE " + c.getClass());
       result.addAll(c.getTExprNodeList(tupleDesc));
     } 
     return result;
   }
 
-  private TFunction getTFunction() {
-    TFunction function = new TFunction();
-    function.setName(getTFunctionName());
-    //XXX: hardcoded for builtins, need to handle UDFS
-    function.setBinary_type(TFunctionBinaryType.BUILTIN);
-    for (Column child : children_) {
-      function.addToArg_types(child.getTColumnType());
-    }
-    function.setRet_type(getTColumnType());
-    function.setHas_var_args(false);
-    //XXX: DO NOT HARDCODE THIS
-    function.setSignature("eq(INT INT)");
-    function.setIs_persistent(true);
-    //XXX: NEEDS FIXING
-    function.setScalar_fn(getTScalarFunction());
-    function.setLast_modified_time(-1);
-    return function;
+  protected List<Column> getOperands() {
+    return operands_;
   }
 
-  private TFunctionName getTFunctionName() {
+  protected TFunctionName getTFunctionName() {
     TFunctionName name = new TFunctionName();
     //XXX: hardcoded for builtins, fix this for udfs
     name.setDb_name(IMPALA_BUILTINS);
-    name.setFunction_name(BuiltinFuncs.getImpalaOperatorName(functionCall_.getOperator().getName()));
+    name.setFunction_name(BuiltinFuncs.getImpalaOperatorName(getName()));
     return name;
   }
 
-  private TScalarFunction getTScalarFunction() {
-    TScalarFunction scalarFunction = new TScalarFunction();
-    //XXX: Need better way to get symbols
-    scalarFunction.setSymbol(BuiltinFuncs.getSymbol(functionCall_.getOperator().getName(), children_));
-    return scalarFunction;
-  }
+  abstract public TExprNodeType getTExprNodeType();
 
+  abstract protected TFunction getTFunction();
+
+  abstract protected TExprNode getDerivedTExprNode();
 }

@@ -61,6 +61,9 @@ public class ColumnType {
   }
 
   private TPrimitiveType getTPrimitiveType(String stringTypeName) {
+    if (stringTypeName.equals("bigint")) {
+      return TPrimitiveType.BIGINT;
+    }
     if (stringTypeName.equals("int")) {
       return TPrimitiveType.INT;
     }

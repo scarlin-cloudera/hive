@@ -63,6 +63,7 @@ import java.util.ArrayList;
     execRequest.setQuery_exec_request(getQueryExecRequest(context, queryString));
     execRequest.setUser_has_profile_access(true);
     execRequest.setAnalysis_warnings(new ArrayList<>());
+    System.out.println("SJC: GETTING EXEC REQUEST " + execRequest);
     return execRequest;
   }
   
@@ -164,10 +165,10 @@ import java.util.ArrayList;
     queryExecRequest.setQuery_plan(context.getPlanExecInfo().getExplainString(TExplainLevel.VERBOSE));
     queryExecRequest.setStmt_type(TStmtType.QUERY);
     queryExecRequest.setHost_list(context.getScanRangeLocations().getHostIndexes());
-    queryExecRequest.setPer_host_mem_estimate(33554432);
-    queryExecRequest.setMax_per_host_min_mem_reservation(8192);
+    queryExecRequest.setPer_host_mem_estimate(201326592);
+    queryExecRequest.setMax_per_host_min_mem_reservation(35659776);
     queryExecRequest.setMax_per_host_thread_reservation(2);
-    queryExecRequest.setDedicated_coord_mem_estimate(138412032);
+    queryExecRequest.setDedicated_coord_mem_estimate(306184192);
     return queryExecRequest;
   }
 

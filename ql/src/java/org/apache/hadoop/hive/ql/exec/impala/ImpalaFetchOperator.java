@@ -60,6 +60,9 @@ public class ImpalaFetchOperator extends FetchOperator {
             PrimitiveTypeInfo primativeType = TypeInfoFactory.getPrimitiveTypeInfo(schema.getType());
 
             switch (primativeType.getPrimitiveCategory()) {
+                case LONG:
+                    impalaInspectors[i] = new ImpalaThriftLongInspector();
+                    break;
                 case INT:
                     impalaInspectors[i] = new ImpalaThriftIntInspector();
                     break;

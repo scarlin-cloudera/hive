@@ -29,12 +29,12 @@ public class BuiltinFuncs {
   public Map<String, BuiltinFunc> myFuncsMap_;
   public Map<String, String> myFuncNameMap_;
   public static class BuiltinFunc {
-    private String symbol_;
+    private Map<String, String>  symbolMap_ = Maps.newHashMap();
     private String func_;
     private String args_;
     
     public BuiltinFunc(String symbol, String func, String args) {
-      symbol_ = symbol;
+      symbolMap_.put("SYMBOL", symbol);
       func_ = func;
       args_ = args;
     }
@@ -925,6 +925,8 @@ public class BuiltinFuncs {
     myFuncs_.add(new BuiltinFunc("_ZN6impala16DecimalOperators33NotDistinct_DecimalVal_DecimalValEPN10impala_udf15FunctionContextERKNS1_10DecimalValES6_", "_impala_builtins.notdistinct", "DECIMAL(*,*)&&&DECIMAL(*,*)"));
     myFuncs_.add(new BuiltinFunc("_ZN6impala9Operators27NotDistinct_DateVal_DateValEPN10impala_udf15FunctionContextERKNS1_7DateValES6_", "_impala_builtins.notdistinct", "DATE&&&DATE"));
 
+    myFuncs_.add(getSumBuiltInFunc());
+
     for (BuiltinFunc b : myFuncs_) {
       String combo = b.func_ + "&&&" + b.args_;
       myFuncsMap_.put(combo, b);
@@ -936,10 +938,20 @@ public class BuiltinFuncs {
     myFuncNameMap_.put("<", "lt");
     myFuncNameMap_.put(">", "gt");
     myFuncNameMap_.put(">=", "ge");
+    myFuncNameMap_.put("sum", "sum");
+  }
+
+  private BuiltinFunc getSumBuiltInFunc() {
+    BuiltinFunc sumFunc = new BuiltinFunc("", "_impala_builtins.sum", "BIGINT");
+    sumFunc.symbolMap_.put("UPDATE","_ZN6impala18AggregateFunctions9SumUpdateIN10impala_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_");
+    sumFunc.symbolMap_.put("INIT", "_ZN6impala18AggregateFunctions8InitNullEPN10impala_udf15FunctionContextEPNS1_6AnyValE");
+    sumFunc.symbolMap_.put("MERGE","_ZN6impala18AggregateFunctions9SumUpdateIN10impala_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_");
+    sumFunc.symbolMap_.put("REMOVE", "_ZN6impala18AggregateFunctions9SumRemoveIN10impala_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_");
+    return sumFunc;
   }
 
   private static final String IMPALA_BUILTINS = "_impala_builtins";
-  public static String getSymbol(String funcName, List<Column> args) {
+  public static String getSymbol(String funcName, List<Column> args, String symbolType) {
     String key = INSTANCE.myFuncNameMap_.get(funcName);
     if (key == null) {
       throw new RuntimeException("Could not find function name " + funcName);
@@ -953,10 +965,11 @@ public class BuiltinFuncs {
     if (b == null) {
       throw new RuntimeException("Could not find function " + key);
     }
-    return b.symbol_;
+    return b.symbolMap_.get(symbolType);
   }
 
   public static String getImpalaOperatorName(String calciteOpName) {
     return INSTANCE.myFuncNameMap_.get(calciteOpName);
   }
+
 }

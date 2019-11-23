@@ -22,16 +22,17 @@ import java.util.List;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.AbstractRelNode;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveFilter;
+import org.apache.impala.thrift.TBackendResourceProfile;
 import org.apache.impala.thrift.TExecNodePhase;
 import org.apache.impala.thrift.TExecStats;
 import org.apache.impala.thrift.TExplainLevel;
 import org.apache.impala.thrift.TExpr;
 import org.apache.impala.thrift.TExprNode;
+import org.apache.impala.thrift.TPipelineMembership;
 import org.apache.impala.thrift.TPlan;
 import org.apache.impala.thrift.TPlanNode;
 import org.apache.impala.thrift.TPlanRootSink;
@@ -45,10 +46,17 @@ import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class PlanNode extends AbstractRelNode {
+//XXX: Right now, we derive from SingleRel, but this won't work when
+// we implement Join.  We also can't derive off of AbstractRelNode directly
+// because it does not allow inputs .i.e getInputs() always returns no inputs
+public abstract class PlanNode extends ImpalaMultiRel {
   protected abstract TPlanNode createDerivedTPlanNode();
 
   protected abstract String getDerivedExplainString(String rootPrefix, String detailPrefix, TExplainLevel detailLevel);
+
+  protected abstract boolean implementsTPlanNode();
+
+  public abstract List<? extends Column> getColumns();
 
   private final PlanId id_;
 
@@ -56,9 +64,7 @@ public abstract class PlanNode extends AbstractRelNode {
 
   private final ImmutableList<TupleDescriptor> tuples_;
 
-  private final ResourceProfile nodeResourceProfile_;
-
-  private final ImmutableList<PipelineMembership> pipelines_;
+  private List<PipelineMembership> cachedPipelines_;
 
   private final HiveFilter filter_;
 
@@ -73,26 +79,23 @@ public abstract class PlanNode extends AbstractRelNode {
 
   private List<RexNode>  outputExprs;
 
-  public PlanNode(RelOptCluster cluster, RelTraitSet traitSet, RelDataType rowType,
+  public PlanNode(RelNode relNode,
       List<TupleDescriptor> tuples, HiveFilter filter, PlanId planId, String displayName) {
-    super(cluster, traitSet);
-    this.rowType = rowType;
+    super(relNode.getCluster(), relNode.getTraitSet(), relNode.getInputs());
+    this.rowType = relNode.getRowType();
     id_ = planId;
     displayName_ = displayName;
     tuples_ = new ImmutableList.Builder<TupleDescriptor>().addAll(tuples).build();
-    nodeResourceProfile_ = new ResourceProfile(true, 1024*1024, 1024*1024, 1024*1024*8, -1, 1024*1024*8, 1);
-    //XXX: when we have children, this will need to change
-    pipelines_ = new ImmutableList.Builder<PipelineMembership>().add(
-        new PipelineMembership(id_, 0, TExecNodePhase.GETNEXT)).build();
     filter_ = filter;
   }
 
-  public void setOutputExprs(List<RexNode> outputExprs) {
-    this.outputExprs = outputExprs;
-  }
-
-  public List<RexNode> getOutputExprs() {
-    return outputExprs;
+  public PlanNode(RelNode relNode, List<TupleDescriptor> tuples) {
+    super(relNode.getCluster(), relNode.getTraitSet(), relNode.getInputs());
+    this.rowType = relNode.getRowType();
+    tuples_ = new ImmutableList.Builder<TupleDescriptor>().addAll(tuples).build();
+    id_ = null;
+    displayName_ = null;
+    filter_ = null;
   }
 
   // Convert this plan node, including all children, to its Thrift representation.
@@ -104,7 +107,10 @@ public abstract class PlanNode extends AbstractRelNode {
 
   public List<TPlanNode> getTPlanNodes() {
     List<TPlanNode> planNodes = Lists.newArrayList();
-    planNodes.add(getTPlanNode());
+    if (implementsTPlanNode()) {
+      planNodes.add(getTPlanNode());
+    }
+
     //XXX: don't call children for exchange?
     for (RelNode input : getInputs()) {
       assert input instanceof PlanNode;
@@ -116,6 +122,7 @@ public abstract class PlanNode extends AbstractRelNode {
   public TPlanNode getTPlanNode() {
     TPlanNode planNode = createDerivedTPlanNode();
     planNode.setNode_id(id_.asInt());
+    planNode.setNum_children(getInputs().size());
     planNode.setLimit(-1);
 
     TExecStats estimatedStats = new TExecStats();
@@ -147,47 +154,64 @@ public abstract class PlanNode extends AbstractRelNode {
     */
     planNode.setDisable_codegen(false);
 
-    Preconditions.checkState(nodeResourceProfile_.isValid());
-    planNode.setResource_profile(nodeResourceProfile_.toThrift());
-    planNode.setPipelines(Lists.newArrayList());
-    for (PipelineMembership pipe : pipelines_) {
-      planNode.addToPipelines(pipe.toThrift());
-    }   
+    planNode.setResource_profile(getResourceProfile().toThrift());
+    List<PipelineMembership> pipelines = computePipelineMembership();
+    planNode.setPipelines(getTPipelineMembership(pipelines));
     return planNode;
   }
 
   public List<TupleDescriptor> getTupleDescriptors() {
+    if (!implementsTPlanNode()) {
+      assert getInputs().size() == 1;
+      assert getInput(0) instanceof PlanNode;
+      return (getPlanNodeInput(0)).getTupleDescriptors();
+    }
     return tuples_;
   }
 
   public List<TupleDescriptor> gatherAllTupleDescriptors() {
-    //XXX: no children yet, can just return these descriptors
-    return tuples_;
+    List<TupleDescriptor> tupleDescriptors = Lists.newArrayList(tuples_);
+    for (RelNode r : getInputs()) {
+      assert r instanceof PlanNode;
+      tupleDescriptors.addAll(((PlanNode)r).gatherAllTupleDescriptors());
+    }
+    return tupleDescriptors;
   }
 
   public List<TableDescriptor> gatherAllTableDescriptors() {
-    //XXX: no children yet, can just return these descriptors
     List<TableDescriptor> tableDescriptors = Lists.newArrayList();
     for (TupleDescriptor tuple : tuples_) {
-      tableDescriptors.add(tuple.getTableDescriptor());
+      if (tuple.getTableDescriptor() != null) {
+        tableDescriptors.add(tuple.getTableDescriptor());
+      }
+    }
+    for (RelNode r : getInputs()) {
+      assert r instanceof PlanNode;
+      tableDescriptors.addAll(((PlanNode)r).gatherAllTableDescriptors());
     }
     return tableDescriptors;
   }
 
   public List<ScanNode> gatherAllScanNodes() {
-    //XXX: no children yet, can just return this if it is a scan node 
     List<ScanNode> scanNodes = Lists.newArrayList();
     if (this instanceof ScanNode) {
       scanNodes.add((ScanNode) this);
+    }
+    for (RelNode r : getInputs()) {
+      assert r instanceof PlanNode;
+      scanNodes.addAll(((PlanNode)r).gatherAllScanNodes());
     }
     return scanNodes;
   }
 
   public List<SlotDescriptor> gatherAllSlotDescriptors() {
-    //XXX: no children yet, can just return these descriptors
     List<SlotDescriptor> slotDescriptors = Lists.newArrayList();
     for (TupleDescriptor tuple : tuples_) {
       slotDescriptors.addAll(tuple.getSlotDescriptors());
+    }
+    for (RelNode r : getInputs()) {
+      assert r instanceof PlanNode;
+      slotDescriptors.addAll(((PlanNode)r).gatherAllSlotDescriptors());
     }
     return slotDescriptors;
   }
@@ -227,6 +251,10 @@ public abstract class PlanNode extends AbstractRelNode {
   public String getExplainString(String rootPrefix, String prefix,
       /*TQueryOptions queryOptions,*/ TExplainLevel detailLevel) {
     StringBuilder expBuilder = new StringBuilder();
+    //XXX: temporarily broken until I can resolve this with getInputs().
+    if (true) {
+      return expBuilder.toString();
+    }
     String detailPrefix = prefix;
     String filler;
     boolean printFiller = (detailLevel.ordinal() >= TExplainLevel.STANDARD.ordinal());
@@ -235,7 +263,7 @@ public abstract class PlanNode extends AbstractRelNode {
     // fragment boundaries.
     //XXX: need to handle inputs
 /*
-    boolean traverseChildren = !children_.isEmpty() &&
+    boolean traverseChildren = getInputs().size() > 0 &&
         !(this instanceof ExchangeNode && detailLevel == TExplainLevel.VERBOSE);
 */
     boolean traverseChildren = false;
@@ -265,7 +293,7 @@ public abstract class PlanNode extends AbstractRelNode {
     if (detailLevel.ordinal() >= TExplainLevel.EXTENDED.ordinal()) {
       // Print resource profile.
       expBuilder.append(detailPrefix);
-      expBuilder.append(nodeResourceProfile_.getExplainString());
+      expBuilder.append(getResourceProfile().getExplainString());
       expBuilder.append("\n");
   
       // Print tuple ids, row size and cardinality.
@@ -294,17 +322,16 @@ public abstract class PlanNode extends AbstractRelNode {
     if (detailLevel.ordinal() >= TExplainLevel.EXTENDED.ordinal()) {
       expBuilder.append(detailPrefix);
       expBuilder.append("in pipelines: ");
-      if (pipelines_ != null) {
-        List<String> pipelines = Lists.newArrayList();
-        for (PipelineMembership pipe: pipelines_) {
-          pipelines.add(pipe.getExplainString());
-        }
-        if (pipelines.isEmpty()) expBuilder.append("<none>");
-        else expBuilder.append(Joiner.on(", ").join(pipelines));
-        expBuilder.append("\n");
-      } else {
-        expBuilder.append("<not computed>");
+      List<String> pipelines = Lists.newArrayList();
+      for (PipelineMembership pipe: computePipelineMembership()) {
+        pipelines.add(pipe.getExplainString());
       }
+      if (pipelines.isEmpty()) {
+        expBuilder.append("<none>");
+      } else {
+        expBuilder.append(Joiner.on(", ").join(pipelines));
+      }
+      expBuilder.append("\n");
     }
 
     // Print the children. Do not traverse into the children of an Exchange node to
@@ -361,9 +388,73 @@ public abstract class PlanNode extends AbstractRelNode {
     return "";
   }
 
+  public PlanNode getPlanNodeInput(int i) {
+    return (PlanNode) getInput(i);
+  }
+
+  /**
+   * Returns true if this plan node can output its first row only after consuming
+   * all rows of all its children. This method is used to group plan nodes
+   * into pipelined units for resource estimation.
+   */
+  public boolean isBlockingNode() {
+      return false;
+  }
+
+  protected ResourceProfile getResourceProfile() {
+    ResourceProfile profile = new ResourceProfile(false, -1L, 8192L, 9223372036854775807L, -1L, -1L, -1);
+    return profile;
+  }
+
+  public List<PipelineMembership> computePipelineMembership() {
+    // we don't want to recalculate if we hit the child node more than
+    // once, so this method will cache the pipelinemembership
+    if (cachedPipelines_ != null) { 
+      return cachedPipelines_;
+    }
+    cachedPipelines_= Lists.newArrayList(); 
+    assert getInputs().size() <= 1;
+    if (getInputs().size() == 0) {
+      cachedPipelines_.add(new PipelineMembership(id_, 0, TExecNodePhase.GETNEXT));
+      return cachedPipelines_;
+    }
+
+    // Default behaviour for simple blocking or streaming nodes.
+    if (isBlockingNode()) {
+      // Executes as root of pipelines that child belongs to and leaf of another
+      // pipeline.
+      cachedPipelines_.add(new PipelineMembership(id_, 0, TExecNodePhase.GETNEXT));
+      for (PipelineMembership childPipeline : getPlanNodeInput(0).computePipelineMembership()) {
+        if (childPipeline.getPhase() == TExecNodePhase.GETNEXT) {
+          cachedPipelines_.add(new PipelineMembership(
+              childPipeline.getId(), childPipeline.getHeight() + 1, TExecNodePhase.OPEN));
+        }
+      }
+    } else {
+      // Streaming with child, e.g. SELECT. Executes as part of all pipelines the child
+      // belongs to.
+      cachedPipelines_ = Lists.newArrayList();
+      for (PipelineMembership childPipeline : getPlanNodeInput(0).computePipelineMembership()) {
+        if (childPipeline.getPhase() == TExecNodePhase.GETNEXT) {
+           cachedPipelines_.add(new PipelineMembership(
+               childPipeline.getId(), childPipeline.getHeight() + 1, TExecNodePhase.GETNEXT));
+        }
+      }
+    }
+    return cachedPipelines_;
+  }
+
+  private List<TPipelineMembership> getTPipelineMembership(List<PipelineMembership> pipelines) {
+    List<TPipelineMembership> tPipelines = Lists.newArrayList();
+    for (PipelineMembership p : pipelines) {
+      tPipelines.add(p.toThrift());
+    }
+    return tPipelines;
+  }
+
   private List<TExpr> getConjuncts() {
     if (filter_ == null) {
-      return ImmutableList.of();
+      return null;
     }
     //XXX: only handles 1 level of expression (no ands yet)
     TExpr expr = new TExpr();

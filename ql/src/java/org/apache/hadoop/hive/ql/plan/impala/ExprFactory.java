@@ -31,7 +31,7 @@ public class ExprFactory {
   public static Column createExpr(RexNode rexNode) {
     //XXX: can this be done with the switch?
     if (rexNode instanceof RexCall) {
-      return new FunctionColumn((RexCall) rexNode);
+      return new ScalarFunctionColumn((RexCall) rexNode);
     }
 
     if (rexNode instanceof RexInputRef) {

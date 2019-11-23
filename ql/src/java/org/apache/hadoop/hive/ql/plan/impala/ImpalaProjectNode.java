@@ -22,38 +22,48 @@ import java.util.List;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rex.RexNode;
 
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.hadoop.hive.ql.impalafile.ListMap;
-import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveFilter;
-import org.apache.impala.thrift.TNetworkAddress;
-import org.apache.impala.thrift.TScanRangeSpec;
+import org.apache.impala.thrift.TExplainLevel;
+import org.apache.impala.thrift.TPlanNode;
 
 import com.google.common.collect.Lists;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class ScanNode extends PlanNode {
+public class ImpalaProjectNode extends PlanNode {
+  private final static Logger LOG = LoggerFactory.getLogger(ImpalaProjectNode.class);
 
-  private final TupleDescriptor tuple_; 
-  protected ScanNode(RelNode relNode, TupleDescriptor tuple, HiveFilter filter, PlanId id, String displayName) {
-    super(relNode, Lists.newArrayList(tuple), filter, id, "SCAN " + displayName);
-    tuple_ = tuple;
-  }
+  private final Project projectNode_; 
 
-  public TupleDescriptor getTupleDesc() {
-    return tuple_;
-  }
-
-  public TScanRangeSpec getScanRangeSpec(ListMap<TNetworkAddress> hostIndexes) {
-    return tuple_.getTableDescriptor().getScanRangeSpec(hostIndexes);
+  public ImpalaProjectNode(Project projectNode) {
+    super(projectNode, Lists.newArrayList());
+    projectNode_ = projectNode;
   }
 
   @Override
-  protected String getDisplayLabelDetail() {
-    return tuple_.getTableDescriptor().getFullTableName(); 
+  public List<Column> getColumns() {
+    List<Column> columns = Lists.newArrayList();
+    for (RexNode field : projectNode_.getProjects()) {
+      columns.add(ExprFactory.createExpr(field));
+    }
+    return columns;
+  }
+
+  @Override
+  protected boolean implementsTPlanNode() {
+    return false;
+  }
+  
+  @Override
+  protected TPlanNode createDerivedTPlanNode() {
+    throw new RuntimeException("Not implemented");
+  }
+
+  @Override
+  protected String getDerivedExplainString(String rootPrefix, String detailPrefix, TExplainLevel detailLevel) {
+    throw new RuntimeException("Not implemented");
   }
 }

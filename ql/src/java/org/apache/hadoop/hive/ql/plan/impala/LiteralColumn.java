@@ -44,7 +44,7 @@ public class LiteralColumn extends Column {
   private static final Logger LOG = LoggerFactory.getLogger(LiteralColumn.class);
 
   public LiteralColumn(RexLiteral literal) {
-    super(literal, literal.getValue().toString());
+    super(literal.getType(), literal.getValue().toString());
     literal_ = literal;
   }
 
