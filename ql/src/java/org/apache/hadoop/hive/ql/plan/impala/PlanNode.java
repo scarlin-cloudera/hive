@@ -50,6 +50,8 @@ public abstract class PlanNode extends AbstractRelNode {
 
   protected abstract String getDerivedExplainString(String rootPrefix, String detailPrefix, TExplainLevel detailLevel);
 
+  protected abstract boolean implementsTPlanNode();
+
   private final PlanId id_;
 
   private final String displayName_;
@@ -95,6 +97,16 @@ public abstract class PlanNode extends AbstractRelNode {
     return outputExprs;
   }
 
+  public PlanNode(RelOptCluster cluster, RelTraitSet traitSet, List<TupleDescriptor> tuples) {
+    super(cluster, traitSet);
+    tuples_ = new ImmutableList.Builder<TupleDescriptor>().addAll(tuples).build();
+    id_ = null;
+    displayName_ = null;
+    nodeResourceProfile_ = null;
+    pipelines_ = ImmutableList.of();
+    filter_ = null;
+  }
+
   // Convert this plan node, including all children, to its Thrift representation.
   public TPlan treeToThrift() {
     TPlan result = new TPlan();
@@ -104,7 +116,10 @@ public abstract class PlanNode extends AbstractRelNode {
 
   public List<TPlanNode> getTPlanNodes() {
     List<TPlanNode> planNodes = Lists.newArrayList();
-    planNodes.add(getTPlanNode());
+    if (implementsTPlanNode()) {
+      planNodes.add(getTPlanNode());
+    }
+
     //XXX: don't call children for exchange?
     for (RelNode input : getInputs()) {
       assert input instanceof PlanNode;

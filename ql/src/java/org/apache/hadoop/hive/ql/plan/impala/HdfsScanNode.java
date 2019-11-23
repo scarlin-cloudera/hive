@@ -186,4 +186,9 @@ public class HdfsScanNode extends ScanNode {
 
     return output.toString();
   }
+
+  @Override
+  protected boolean implementsTPlanNode() {
+    return true;
+  }
 }

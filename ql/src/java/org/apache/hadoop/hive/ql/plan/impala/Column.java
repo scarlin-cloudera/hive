@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.ql.plan.impala;
 import java.util.List;
 
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.impala.thrift.TColumn;
 import org.apache.impala.thrift.TColumnType;
 import org.apache.impala.thrift.TExprNode;
@@ -40,6 +41,11 @@ public abstract class Column implements Comparable<Column> {
 
   private static final Logger LOG = LoggerFactory.getLogger(Column.class);
 
+  public Column(String name, SqlTypeName type) {
+    name_ = name;
+    type_ = new ColumnType(type);
+  }
+
   public Column(RexNode column, String name) {
     name_ = name != null ? name : toString();
     type_ = new ColumnType(column.getType().getSqlTypeName());
@@ -48,10 +54,6 @@ public abstract class Column implements Comparable<Column> {
   public Column(String name, String type) {
     name_ = name;
     type_ = new ColumnType(type);
-  }
-
-  public Column(RexNode column) {
-    this(column, null);
   }
 
   public ColumnType getType() {
