@@ -52,6 +52,8 @@ public abstract class PlanNode extends AbstractRelNode {
 
   protected abstract boolean implementsTPlanNode();
 
+  public abstract List<? extends Column> getColumns();
+
   private final PlanId id_;
 
   private final String displayName_;

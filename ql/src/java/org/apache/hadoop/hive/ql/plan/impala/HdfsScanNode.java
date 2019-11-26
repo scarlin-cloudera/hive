@@ -191,4 +191,10 @@ public class HdfsScanNode extends ScanNode {
   protected boolean implementsTPlanNode() {
     return true;
   }
+
+  @Override
+  public List<? extends Column> getColumns() {
+    assert getTupleDescriptors().size() == 1;
+    return getTupleDescriptors().get(0).getColumns();
+  }
 }

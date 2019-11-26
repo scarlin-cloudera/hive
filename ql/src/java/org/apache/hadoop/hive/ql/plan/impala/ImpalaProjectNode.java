@@ -44,6 +44,7 @@ public class ImpalaProjectNode extends PlanNode {
     projectNode_ = projectNode;
   }
 
+  @Override
   public List<Column> getColumns() {
     List<Column> columns = Lists.newArrayList();
     for (RexNode field : projectNode_.getProjects()) {

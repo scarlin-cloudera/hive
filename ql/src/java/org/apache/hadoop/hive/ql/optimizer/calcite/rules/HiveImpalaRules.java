@@ -24,7 +24,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexInputRef;
 
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveFilter;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveProject;
@@ -70,8 +69,7 @@ public class HiveImpalaRules {
       IdGenerator<PlanId> planIdGen = (IdGenerator<PlanId>) idGenerators_.get(IdGenType.PLAN);
 
       // create an Impala TupleDescriptor
-      TupleDescriptor tupleDesc = new TupleDescriptor(scan,
-              getAllInputRefs(getRexNodes(project, filter)), tupleIdGen.getNextId(), idGenerators_);
+      TupleDescriptor tupleDesc = new TupleDescriptor(scan, tupleIdGen.getNextId(), idGenerators_);
 
       // create the Scan's row type that is needed by Calcite to verify equivalence;
       // TODO: if the project has expressions, this rule cannot be applied
@@ -116,7 +114,6 @@ public class HiveImpalaRules {
 
       // create an Impala TupleDescriptor
       TupleDescriptor tupleDesc = new TupleDescriptor(scan,
-              getAllInputRefs(getRexNodes(project, null /* no filter */)),
               tupleIdGen.getNextId(), idGenerators_);
 
       // create the Scan's row type that is needed by Calcite to verify equivalence;
@@ -146,18 +143,5 @@ public class HiveImpalaRules {
       nodes.add(filter.getCondition());
     }
     return nodes;
-  }
-
-  private static List<RexInputRef> getAllInputRefs(List<RexNode> nodes) {
-    List<RexInputRef> inputRefs = Lists.newArrayList();
-    for (RexNode node : nodes) {
-      if (node instanceof RexInputRef) {
-        inputRefs.add((RexInputRef) node);
-      }
-      if (node instanceof RexCall) {
-        inputRefs.addAll(getAllInputRefs(((RexCall)node).getOperands()));
-      }
-    }
-    return inputRefs;
   }
 }

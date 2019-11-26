@@ -124,4 +124,10 @@ public class AggregationNode extends PlanNode {
   private static List<TupleDescriptor> getTuplesForAggregate(HiveAggregate aggregate) {
     return Lists.newArrayList();
   }
+
+  @Override
+  public List<? extends Column> getColumns() {
+    assert getTupleDescriptors().size() == 1;
+    return getTupleDescriptors().get(0).getColumns();
+  }
 }
