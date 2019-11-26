@@ -84,6 +84,10 @@ public class HiveImpalaRules {
       // be a RelNode type
       ScanNode newScan = new HdfsScanNode(scan.getCluster(), scan.getTraitSet(), rowType,
           tupleDesc, filter, planIdGen.getNextId());
+
+      // TODO: currently we are using the output exprs but later we could deprecate that in
+      // favor of the rowType
+      newScan.setOutputExprs(project.getProjects());
       call.transformTo(newScan);
       return;
 
@@ -123,6 +127,10 @@ public class HiveImpalaRules {
 
       ScanNode newScan = new HdfsScanNode(scan.getCluster(), scan.getTraitSet(), rowType,
           tupleDesc,null /* no filter */, planIdGen.getNextId());
+
+      // TODO: currently we are using the output exprs but later we could deprecate that in
+      // favor of the rowType
+      newScan.setOutputExprs(project.getProjects());
       call.transformTo(newScan);
       return;
 
