@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 public abstract class ScanNode extends PlanNode {
 
   private final TupleDescriptor tuple_; 
-  protected ScanNode(RelOptCluster cluster, RelTraitSet traitSet, RelDataType rowType,
+  protected ScanNode(RelOptCluster cluster, RelTraitSet traitSet,
       TupleDescriptor tuple, HiveFilter filter, PlanId id, String displayName) {
     super(cluster, traitSet, rowType, Lists.newArrayList(tuple), filter, id, "SCAN " + displayName);
     tuple_ = tuple;

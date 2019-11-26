@@ -19,6 +19,7 @@
 package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
@@ -43,8 +44,9 @@ public class AggregationNode extends PlanNode {
   private final HiveAggregate aggregate_;
 
   public AggregationNode(RelOptCluster cluster, RelTraitSet traitSet,
-    HiveAggregate aggregate, PlanId id) {
-    super(cluster, traitSet, aggregate.getRowType(), getTuplesForAggregate(aggregate), null, id, "AGGREGATE");
+    HiveAggregate aggregate, PlanId id, Map<IdGenType, IdGenerator<?>> idGenerators) {
+    super(cluster, traitSet, aggregate.getRowType(), TupleDescriptor.createTupleDesc(aggregate, idGenerators),
+        null, id, "AGGREGATE");
     aggregate_ = aggregate;
   }
 
@@ -118,11 +120,6 @@ public class AggregationNode extends PlanNode {
   private TBackendResourceProfile getResourceProfile() {
     ResourceProfile resourceProfile = new ResourceProfile(true, -1L, 0L, 9223372036854775807L, 2097152L, 2097152L, -1);
     return resourceProfile.toThrift();
-  }
-
-  //XXX:
-  private static List<TupleDescriptor> getTuplesForAggregate(HiveAggregate aggregate) {
-    return Lists.newArrayList();
   }
 
   @Override

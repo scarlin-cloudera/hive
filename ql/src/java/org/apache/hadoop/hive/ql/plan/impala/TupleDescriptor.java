@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -65,13 +67,12 @@ public class TupleDescriptor {
     }
   }
 
-  public TupleDescriptor(HiveTableScan tableScan, TupleId id,
+  private TupleDescriptor(RelNode relNode, List<Integer> usedIndexes, TableDescriptor tableDesc, TupleId id,
       Map<IdGenType, IdGenerator<?>> idGenerators) {
-    IdGenerator<TableId> tableIdGen = (IdGenerator<TableId>) idGenerators.get(IdGenType.TABLE);
     IdGenerator<SlotId> slotIdGen = (IdGenerator<SlotId>) idGenerators.get(IdGenType.SLOT);
     tupleId_ = id;
-    tableDescriptor_ = new HdfsTableDescriptor(tableScan, tableIdGen.getNextId());
-    columnsInIndexOrder = createColumns(tableScan);
+    tableDescriptor_ = tableDesc;
+    columnsInIndexOrder = createColumns(relNode, usedIndexes);
     byteSize_ = getTupleSize(columnsInIndexOrder);
     numNullBytes_ = (columnsInIndexOrder.size() - 1) / 8 + 1;
     slotDescriptors_ = createSlotDescriptors(columnsInIndexOrder, slotIdGen);
@@ -106,13 +107,11 @@ public class TupleDescriptor {
     return slotDescriptors_.values();
   }
 
-  public HiveTableScan getTableScan() {
-    return tableDescriptor_.getTableScan();
-  }
-
+/*
   public String getTableName() {
     return tableDescriptor_.getTableName();
   }
+*/
 
   public int getTupleId() {
     return tupleId_.asInt();
@@ -158,12 +157,15 @@ public class TupleDescriptor {
     return result;
   }
 
-  private List<SlotRefColumn> createColumns(HiveTableScan tableScan) {
+  private List<SlotRefColumn> createColumns(RelNode relNode, List<Integer> usedIndexes) {
     List<SlotRefColumn> columns = Lists.newArrayList();
-    for (Integer index : tableScan.getNeededColIndxsFrmReloptHT()) {
-      RelDataTypeField dataTypeField = tableScan.getRowType().getFieldList().get(index);
-      ColumnDescriptor columnDesc = tableDescriptor_.getColumnDescriptor(index);
-      String colName = tableDescriptor_.getFullTableName() + "." + columnDesc.getName();
+    for (Integer index : usedIndexes) {
+      String colName = relNode.getRowType().getFieldNames().get(index);
+      RelDataTypeField dataTypeField = relNode.getRowType().getFieldList().get(index);
+      if (tableDescriptor_ != null) {
+        ColumnDescriptor columnDesc = tableDescriptor_.getColumnDescriptor(index);
+        colName = tableDescriptor_.getFullTableName() + "." + columnDesc.getName();
+      }
       columns.add(new SlotRefColumn(index, colName, dataTypeField.getType().getSqlTypeName()));
     }
     return columns;
@@ -183,5 +185,23 @@ public class TupleDescriptor {
       columns.add(c);
     }
     return columns;
+  }
+
+  public static List<TupleDescriptor> createTupleDesc(RelNode relNode,
+      Map<IdGenType, IdGenerator<?>> idGenerators) {
+    List<Integer> indexes =
+        IntStream.rangeClosed(0, relNode.getRowType().getFieldCount()).boxed().collect(Collectors.toList());
+    IdGenerator<TupleId> tupleIdGen = (IdGenerator<TupleId>) idGenerators.get(IdGenType.TUPLE);
+    TupleDescriptor tupleDesc = new TupleDescriptor(relNode, indexes, null, tupleIdGen.getNextId(), idGenerators);
+    return Lists.newArrayList(tupleDesc);
+  }
+
+  public static TupleDescriptor createHdfsTupleDesc(HiveTableScan tableScan,
+      Map<IdGenType, IdGenerator<?>> idGenerators) {
+    IdGenerator<TableId> tableIdGen = (IdGenerator<TableId>) idGenerators.get(IdGenType.TABLE);
+    IdGenerator<TupleId> tupleIdGen = (IdGenerator<TupleId>) idGenerators.get(IdGenType.TABLE);
+    TableDescriptor tableDesc = new HdfsTableDescriptor(tableScan, tableIdGen.getNextId());
+    return new TupleDescriptor(tableScan, tableScan.getNeededColIndxsFrmReloptHT(),
+        tableDesc, tupleIdGen.getNextId(), idGenerators);
   }
 }

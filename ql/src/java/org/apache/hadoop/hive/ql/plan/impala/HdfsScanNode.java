@@ -43,7 +43,7 @@ public class HdfsScanNode extends ScanNode {
   //XXX: calculate this
   private final int maxScanRangeNumRows_ = -1;
 
-  public HdfsScanNode(RelOptCluster cluster, RelTraitSet traitSet, RelDataType rowType,
+  public HdfsScanNode(RelOptCluster cluster, RelTraitSet traitSet,
       TupleDescriptor tuple, HiveFilter filter, PlanId id) {
     super(cluster, traitSet, rowType, tuple, filter, id, "HDFS");
   }

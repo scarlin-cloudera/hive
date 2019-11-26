@@ -77,7 +77,7 @@ public abstract class PlanNode extends AbstractRelNode {
 
   private List<RexNode>  outputExprs;
 
-  public PlanNode(RelOptCluster cluster, RelTraitSet traitSet, RelDataType rowType,
+  public PlanNode(RelOptCluster cluster, RelTraitSet traitSet,
       List<TupleDescriptor> tuples, HiveFilter filter, PlanId planId, String displayName) {
     super(cluster, traitSet);
     this.rowType = rowType;
@@ -89,14 +89,6 @@ public abstract class PlanNode extends AbstractRelNode {
     pipelines_ = new ImmutableList.Builder<PipelineMembership>().add(
         new PipelineMembership(id_, 0, TExecNodePhase.GETNEXT)).build();
     filter_ = filter;
-  }
-
-  public void setOutputExprs(List<RexNode> outputExprs) {
-    this.outputExprs = outputExprs;
-  }
-
-  public List<RexNode> getOutputExprs() {
-    return outputExprs;
   }
 
   public PlanNode(RelOptCluster cluster, RelTraitSet traitSet, List<TupleDescriptor> tuples) {

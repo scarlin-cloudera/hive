@@ -69,7 +69,7 @@ public class HiveImpalaRules {
       IdGenerator<PlanId> planIdGen = (IdGenerator<PlanId>) idGenerators_.get(IdGenType.PLAN);
 
       // create an Impala TupleDescriptor
-      TupleDescriptor tupleDesc = new TupleDescriptor(scan, tupleIdGen.getNextId(), idGenerators_);
+      TupleDescriptor tupleDesc = TupleDescriptor.createHdfsTupleDesc(scan, idGenerators_);
 
       // create the Scan's row type that is needed by Calcite to verify equivalence;
       // TODO: if the project has expressions, this rule cannot be applied
@@ -113,8 +113,7 @@ public class HiveImpalaRules {
       IdGenerator<PlanId> planIdGen = (IdGenerator<PlanId>) idGenerators_.get(IdGenType.PLAN);
 
       // create an Impala TupleDescriptor
-      TupleDescriptor tupleDesc = new TupleDescriptor(scan,
-              tupleIdGen.getNextId(), idGenerators_);
+      TupleDescriptor tupleDesc = TupleDescriptor.createHdfsTupleDesc(scan, idGenerators_);
 
       // create the Scan's row type that is needed by Calcite to verify equivalence;
       // in this case, the Scan will simply inherit the Project's row type
