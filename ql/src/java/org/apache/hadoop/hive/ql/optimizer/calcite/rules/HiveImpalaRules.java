@@ -25,12 +25,15 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.rex.RexCall;
 
+import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveAggregate;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveFilter;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveProject;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveTableScan;
+import org.apache.hadoop.hive.ql.plan.impala.AggregationNode;
 import org.apache.hadoop.hive.ql.plan.impala.HdfsScanNode;
 import org.apache.hadoop.hive.ql.plan.impala.IdGenType;
 import org.apache.hadoop.hive.ql.plan.impala.IdGenerator;
+import org.apache.hadoop.hive.ql.plan.impala.ImpalaProjectNode;
 import org.apache.hadoop.hive.ql.plan.impala.PlanId;
 import org.apache.hadoop.hive.ql.plan.impala.ScanNode;
 import org.apache.hadoop.hive.ql.plan.impala.TupleDescriptor;
@@ -50,97 +53,110 @@ public class HiveImpalaRules {
    * Rule to transform a Project-Filter-Scan logical plan into Impala's
    * HdfsScanNode that can process filters and projects directly within the scan
    */
-  public static class ImpalaProjectFilterScanRule extends RelOptRule {
+  public static class ImpalaFilterScanRule extends RelOptRule {
     private final Map<IdGenType, IdGenerator<?>> idGenerators_;
 
-    public ImpalaProjectFilterScanRule(RelBuilderFactory relBuilderFactory,
+    public ImpalaFilterScanRule(RelBuilderFactory relBuilderFactory,
                                        Map<IdGenType, IdGenerator<?>> idGenerators) {
-      super(operand(HiveProject.class, operand(HiveFilter.class, operand(HiveTableScan.class, none()))),
+      super(operand(HiveFilter.class, operand(HiveTableScan.class, none())),
               relBuilderFactory, null);
       idGenerators_ = idGenerators;
 
     }
     @Override public void onMatch(RelOptRuleCall call) {
-      final HiveProject project = call.rel(0);
-      final HiveFilter filter = call.rel(1);
-      final HiveTableScan scan = call.rel(2);
+      System.out.println("SJC: MATCHED FILTER SCAN RULE");
+      final HiveFilter filter = call.rel(0);
+      final HiveTableScan scan = call.rel(1);
 
-      IdGenerator<TupleId> tupleIdGen = (IdGenerator<TupleId>) idGenerators_.get(IdGenType.TUPLE);
       IdGenerator<PlanId> planIdGen = (IdGenerator<PlanId>) idGenerators_.get(IdGenType.PLAN);
-
-      // create an Impala TupleDescriptor
-      TupleDescriptor tupleDesc = TupleDescriptor.createHdfsTupleDesc(scan, idGenerators_);
-
-      // create the Scan's row type that is needed by Calcite to verify equivalence;
-      // TODO: if the project has expressions, this rule cannot be applied
-      RelDataType rowType = project.getRowType();
 
       // Only support HDFS for now.
       // TODO: generalize to other scan types
       // NOTE: currently, the ScanNode is not a derived class of Calcite RelNode, so this will work
       // only after we create that hierarchy since the output of a 'Transform' rule should
       // be a RelNode type
-      ScanNode newScan = new HdfsScanNode(scan.getCluster(), scan.getTraitSet(), rowType,
-          tupleDesc, filter, planIdGen.getNextId());
+      ScanNode newScan = new HdfsScanNode(scan, filter, planIdGen.getNextId(), idGenerators_);
 
       // TODO: currently we are using the output exprs but later we could deprecate that in
       // favor of the rowType
-      newScan.setOutputExprs(project.getProjects());
       call.transformTo(newScan);
       return;
 
     }
   }
+
   /**
-   * Rule to transform a Project-Scan logical plan into Impala's
+   * Rule to transform a Scan logical plan into Impala's
    * HdfsScanNode that can process projects directly within the scan
    */
-  public static class ImpalaProjectScanRule extends RelOptRule {
+  public static class ImpalaScanRule extends RelOptRule {
 
     private final Map<IdGenType, IdGenerator<?>> idGenerators_;
 
-    public ImpalaProjectScanRule(RelBuilderFactory relBuilderFactory,
+    public ImpalaScanRule(RelBuilderFactory relBuilderFactory,
                                        Map<IdGenType, IdGenerator<?>> idGenerators) {
-      super(operand(HiveProject.class, operand(HiveTableScan.class, none())),
+      super(operand(HiveTableScan.class, none()),
+              relBuilderFactory, null);
+      idGenerators_ = idGenerators;
+    }
+    @Override public void onMatch(RelOptRuleCall call) {
+      final HiveTableScan scan = call.rel(0);
+      System.out.println("SJC: MATCHED SCAN RULE");
+
+      IdGenerator<PlanId> planIdGen = (IdGenerator<PlanId>) idGenerators_.get(IdGenType.PLAN);
+
+      ScanNode newScan = new HdfsScanNode(scan, null /* no filter */,planIdGen.getNextId(), idGenerators_); 
+
+      call.transformTo(newScan);
+      return;
+
+    }
+  }
+
+  public static class ImpalaProjectRule extends RelOptRule {
+
+    private final Map<IdGenType, IdGenerator<?>> idGenerators_;
+
+    public ImpalaProjectRule(RelBuilderFactory relBuilderFactory,
+                                       Map<IdGenType, IdGenerator<?>> idGenerators) {
+      super(operand(HiveProject.class, any()),
               relBuilderFactory, null);
       idGenerators_ = idGenerators;
     }
     @Override public void onMatch(RelOptRuleCall call) {
       final HiveProject project = call.rel(0);
-      final HiveTableScan scan = call.rel(1);
 
-      IdGenerator<TupleId> tupleIdGen = (IdGenerator<TupleId>) idGenerators_.get(IdGenType.TUPLE);
-      IdGenerator<PlanId> planIdGen = (IdGenerator<PlanId>) idGenerators_.get(IdGenType.PLAN);
+      System.out.println("SJC: MATCHED PROJECT RULE");
+      ImpalaProjectNode newProject = new ImpalaProjectNode(project);
 
-      // create an Impala TupleDescriptor
-      TupleDescriptor tupleDesc = TupleDescriptor.createHdfsTupleDesc(scan, idGenerators_);
-
-      // create the Scan's row type that is needed by Calcite to verify equivalence;
-      // in this case, the Scan will simply inherit the Project's row type
-      // for now assume that the project does not have expressions
-      // TODO: if the project has expressions, this rule cannot be applied
-      RelDataType rowType = project.getRowType();
-
-      ScanNode newScan = new HdfsScanNode(scan.getCluster(), scan.getTraitSet(), rowType,
-          tupleDesc,null /* no filter */, planIdGen.getNextId());
-
-      // TODO: currently we are using the output exprs but later we could deprecate that in
-      // favor of the rowType
-      newScan.setOutputExprs(project.getProjects());
-      call.transformTo(newScan);
+      call.transformTo(newProject);
       return;
 
     }
   }
-    
-  private static List<RexNode> getRexNodes(HiveProject project, HiveFilter filter) {
-    List<RexNode> nodes = Lists.newArrayList();
-    assert project != null;
-    nodes.addAll(project.getProjects());
-    if (filter != null) {
-      // XXX: can I just add getChildExprs?
-      nodes.add(filter.getCondition());
+
+  public static class ImpalaAggRule extends RelOptRule {
+
+    private final Map<IdGenType, IdGenerator<?>> idGenerators_;
+
+    public ImpalaAggRule(RelBuilderFactory relBuilderFactory,
+                                       Map<IdGenType, IdGenerator<?>> idGenerators) {
+      super(operand(HiveAggregate.class, any()),
+              relBuilderFactory, null);
+      idGenerators_ = idGenerators;
     }
-    return nodes;
+    @Override public void onMatch(RelOptRuleCall call) {
+      final HiveAggregate agg = call.rel(0);
+
+      System.out.println("SJC: MATCHED AGG RULE");
+      IdGenerator<PlanId> planIdGen = (IdGenerator<PlanId>) idGenerators_.get(IdGenType.PLAN);
+
+      AggregationNode newAgg = new AggregationNode(agg, planIdGen.getNextId(), idGenerators_);
+
+      call.transformTo(newAgg);
+      return;
+
+    }
   }
+
 }

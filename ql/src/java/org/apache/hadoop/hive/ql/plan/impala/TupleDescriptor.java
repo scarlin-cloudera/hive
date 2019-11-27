@@ -81,7 +81,9 @@ public class TupleDescriptor {
   public TTupleDescriptor toThrift() {
     TTupleDescriptor ttupleDesc =
         new TTupleDescriptor(tupleId_.asInt(), byteSize_ + numNullBytes_, numNullBytes_);
-    ttupleDesc.setTableId(tableDescriptor_.getTableId());
+    if (tableDescriptor_ != null) {
+      ttupleDesc.setTableId(tableDescriptor_.getTableId());
+    }
 //TODO:    ttupleDesc.setTuplePath(path_.getAbsolutePath());
     ttupleDesc.setTuplePath(tuplePaths_);
     return ttupleDesc;
@@ -190,7 +192,7 @@ public class TupleDescriptor {
   public static List<TupleDescriptor> createTupleDesc(RelNode relNode,
       Map<IdGenType, IdGenerator<?>> idGenerators) {
     List<Integer> indexes =
-        IntStream.rangeClosed(0, relNode.getRowType().getFieldCount()).boxed().collect(Collectors.toList());
+        IntStream.rangeClosed(0, relNode.getRowType().getFieldCount() - 1).boxed().collect(Collectors.toList());
     IdGenerator<TupleId> tupleIdGen = (IdGenerator<TupleId>) idGenerators.get(IdGenType.TUPLE);
     TupleDescriptor tupleDesc = new TupleDescriptor(relNode, indexes, null, tupleIdGen.getNextId(), idGenerators);
     return Lists.newArrayList(tupleDesc);
@@ -199,7 +201,7 @@ public class TupleDescriptor {
   public static TupleDescriptor createHdfsTupleDesc(HiveTableScan tableScan,
       Map<IdGenType, IdGenerator<?>> idGenerators) {
     IdGenerator<TableId> tableIdGen = (IdGenerator<TableId>) idGenerators.get(IdGenType.TABLE);
-    IdGenerator<TupleId> tupleIdGen = (IdGenerator<TupleId>) idGenerators.get(IdGenType.TABLE);
+    IdGenerator<TupleId> tupleIdGen = (IdGenerator<TupleId>) idGenerators.get(IdGenType.TUPLE);
     TableDescriptor tableDesc = new HdfsTableDescriptor(tableScan, tableIdGen.getNextId());
     return new TupleDescriptor(tableScan, tableScan.getNeededColIndxsFrmReloptHT(),
         tableDesc, tupleIdGen.getNextId(), idGenerators);

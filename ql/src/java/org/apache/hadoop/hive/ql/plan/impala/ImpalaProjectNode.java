@@ -38,9 +38,8 @@ public class ImpalaProjectNode extends PlanNode {
 
   private final Project projectNode_; 
 
-  public ImpalaProjectNode(RelOptCluster cluster, RelTraitSet traitSet,
-      Project projectNode, List<TupleDescriptor> tupleDescs) {
-    super(cluster, traitSet, tupleDescs);
+  public ImpalaProjectNode(Project projectNode) {
+    super(projectNode, Lists.newArrayList());
     projectNode_ = projectNode;
   }
 

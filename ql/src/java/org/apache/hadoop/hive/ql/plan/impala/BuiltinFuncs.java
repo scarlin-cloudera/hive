@@ -942,7 +942,7 @@ public class BuiltinFuncs {
   }
 
   private BuiltinFunc getSumBuiltInFunc() {
-    BuiltinFunc sumFunc = new BuiltinFunc("", "_impala_builtins.sum", "BIGINT");
+    BuiltinFunc sumFunc = new BuiltinFunc("", "_impala_builtins.sum", "INT");
     sumFunc.symbolMap_.put("UPDATE","_ZN6impala18AggregateFunctions9SumUpdateIN10impala_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_");
     sumFunc.symbolMap_.put("INIT", "_ZN6impala18AggregateFunctions8InitNullEPN10impala_udf15FunctionContextEPNS1_6AnyValE");
     sumFunc.symbolMap_.put("MERGE","_ZN6impala18AggregateFunctions9SumUpdateIN10impala_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_");

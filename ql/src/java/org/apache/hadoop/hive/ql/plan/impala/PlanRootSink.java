@@ -58,15 +58,11 @@ public class PlanRootSink extends DataSink {
     //XXX: fill this in
     dataSink.setLabel("");
 
-    if (rootNode_.getOutputExprs() != null) {
-      for (RexNode field : rootNode_.getOutputExprs()) {
-        TExpr expr = new TExpr();
-        Column c = ExprFactory.createExpr(field);
-        //XXX: assuming one tuple right now
-        assert rootNode_.getTupleDescriptors().size() == 0;
-        expr.setNodes(c.getTExprNodeList(rootNode_.getTupleDescriptors().get(0)));
-        dataSink.addToOutput_exprs(expr);
-      }
+    assert rootNode_.getColumns().size() > 0;
+    for (Column c : rootNode_.getColumns()) {
+      TExpr expr = new TExpr();
+      expr.setNodes(c.getTExprNodeList(rootNode_.getTupleDescriptors().get(0)));
+      dataSink.addToOutput_exprs(expr);
     }
 
     // XXX hardcoded

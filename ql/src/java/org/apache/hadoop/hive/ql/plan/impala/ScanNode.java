@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.TableScan;
 
 import org.apache.calcite.rel.type.RelDataType;
@@ -38,9 +39,8 @@ import org.slf4j.LoggerFactory;
 public abstract class ScanNode extends PlanNode {
 
   private final TupleDescriptor tuple_; 
-  protected ScanNode(RelOptCluster cluster, RelTraitSet traitSet,
-      TupleDescriptor tuple, HiveFilter filter, PlanId id, String displayName) {
-    super(cluster, traitSet, rowType, Lists.newArrayList(tuple), filter, id, "SCAN " + displayName);
+  protected ScanNode(RelNode relNode, TupleDescriptor tuple, HiveFilter filter, PlanId id, String displayName) {
+    super(relNode, Lists.newArrayList(tuple), filter, id, "SCAN " + displayName);
     tuple_ = tuple;
   }
 

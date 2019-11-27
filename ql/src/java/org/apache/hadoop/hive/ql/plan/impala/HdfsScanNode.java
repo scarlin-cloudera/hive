@@ -19,13 +19,17 @@
 package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.core.TableScan;
 
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveAggregate;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveFilter;
+import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveProject;
+import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveTableScan;
 
 import org.apache.impala.thrift.TExplainLevel;
 import org.apache.impala.thrift.THdfsScanNode;
@@ -43,9 +47,10 @@ public class HdfsScanNode extends ScanNode {
   //XXX: calculate this
   private final int maxScanRangeNumRows_ = -1;
 
-  public HdfsScanNode(RelOptCluster cluster, RelTraitSet traitSet,
-      TupleDescriptor tuple, HiveFilter filter, PlanId id) {
-    super(cluster, traitSet, rowType, tuple, filter, id, "HDFS");
+  public HdfsScanNode(HiveTableScan scan, HiveFilter filter, PlanId id,
+      Map<IdGenType, IdGenerator<?>> idGenerators) {
+    super(scan, TupleDescriptor.createHdfsTupleDesc(scan, idGenerators),
+        filter, id, "HDFS");
   }
 
   @Override

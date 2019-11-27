@@ -2349,12 +2349,28 @@ public class CalcitePlanner extends SemanticAnalyzer {
 
     private void applyImpalaRules(HepProgramBuilder program) {
       List<RelOptRule> impalaRules = Lists.newArrayList();
-      impalaRules.add(new HiveImpalaRules.ImpalaProjectFilterScanRule(HiveRelFactories.HIVE_BUILDER,
+/*
+      impalaRules.add(new HiveImpalaRules.ImpalaFilterScanRule(HiveRelFactories.HIVE_BUILDER,
               ctx.getImpalaContext().getIdGenerators()));
-      impalaRules.add(new HiveImpalaRules.ImpalaProjectScanRule(HiveRelFactories.HIVE_BUILDER,
+*/
+      impalaRules.add(new HiveImpalaRules.ImpalaProjectRule(HiveRelFactories.HIVE_BUILDER,
+              ctx.getImpalaContext().getIdGenerators()));
+      impalaRules.add(new HiveImpalaRules.ImpalaAggRule(HiveRelFactories.HIVE_BUILDER,
+              ctx.getImpalaContext().getIdGenerators()));
+      impalaRules.add(new HiveImpalaRules.ImpalaScanRule(HiveRelFactories.HIVE_BUILDER,
               ctx.getImpalaContext().getIdGenerators()));
       generatePartialProgram(program, false, HepMatchOrder.DEPTH_FIRST,
               impalaRules.toArray(new RelOptRule[impalaRules.size()]));
+
+      // Need a second pass; in the first pass, we apply filter-scan, in this pass we apply any
+      // leftover TableScan nodes.
+/*
+      List<RelOptRule> impalaRules2 = Lists.newArrayList();
+      impalaRules2.add(new HiveImpalaRules.ImpalaScanRule(HiveRelFactories.HIVE_BUILDER,
+              ctx.getImpalaContext().getIdGenerators()));
+      generatePartialProgram(program, false, HepMatchOrder.DEPTH_FIRST,
+              impalaRules2.toArray(new RelOptRule[impalaRules2.size()]));
+*/
     }
 
     private void applyDruidRules(HepProgramBuilder program) {

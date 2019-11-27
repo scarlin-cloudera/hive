@@ -42,7 +42,7 @@ public class AggFunctionColumn extends FunctionColumn {
 
   public AggFunctionColumn(AggregateCall function, Column operand) {
     super(operand, function.getType().getSqlTypeName(),
-        function.getName());
+        function.getAggregation().getName());
   }
 
   @Override

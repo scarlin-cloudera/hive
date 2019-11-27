@@ -22,7 +22,6 @@ import java.util.List;
 
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.AbstractRelNode;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
@@ -45,7 +44,10 @@ import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class PlanNode extends AbstractRelNode {
+//XXX: Right now, we derive from SingleRel, but this won't work when
+// we implement Join.  We also can't derive off of AbstractRelNode directly
+// because it does not allow inputs .i.e getInputs() always returns no inputs
+public abstract class PlanNode extends ImpalaMultiRel {
   protected abstract TPlanNode createDerivedTPlanNode();
 
   protected abstract String getDerivedExplainString(String rootPrefix, String detailPrefix, TExplainLevel detailLevel);
@@ -77,10 +79,10 @@ public abstract class PlanNode extends AbstractRelNode {
 
   private List<RexNode>  outputExprs;
 
-  public PlanNode(RelOptCluster cluster, RelTraitSet traitSet,
+  public PlanNode(RelNode relNode,
       List<TupleDescriptor> tuples, HiveFilter filter, PlanId planId, String displayName) {
-    super(cluster, traitSet);
-    this.rowType = rowType;
+    super(relNode.getCluster(), relNode.getTraitSet(), relNode.getInputs());
+    this.rowType = relNode.getRowType();
     id_ = planId;
     displayName_ = displayName;
     tuples_ = new ImmutableList.Builder<TupleDescriptor>().addAll(tuples).build();
@@ -91,8 +93,9 @@ public abstract class PlanNode extends AbstractRelNode {
     filter_ = filter;
   }
 
-  public PlanNode(RelOptCluster cluster, RelTraitSet traitSet, List<TupleDescriptor> tuples) {
-    super(cluster, traitSet);
+  public PlanNode(RelNode relNode, List<TupleDescriptor> tuples) {
+    super(relNode.getCluster(), relNode.getTraitSet(), relNode.getInputs());
+    this.rowType = relNode.getRowType();
     tuples_ = new ImmutableList.Builder<TupleDescriptor>().addAll(tuples).build();
     id_ = null;
     displayName_ = null;
@@ -166,6 +169,11 @@ public abstract class PlanNode extends AbstractRelNode {
   }
 
   public List<TupleDescriptor> getTupleDescriptors() {
+    if (!implementsTPlanNode()) {
+      assert getInputs().size() == 1;
+      assert getInput(0) instanceof PlanNode;
+      return ((PlanNode) getInput(0)).getTupleDescriptors();
+    }
     return tuples_;
   }
 
@@ -178,7 +186,9 @@ public abstract class PlanNode extends AbstractRelNode {
     //XXX: no children yet, can just return these descriptors
     List<TableDescriptor> tableDescriptors = Lists.newArrayList();
     for (TupleDescriptor tuple : tuples_) {
-      tableDescriptors.add(tuple.getTableDescriptor());
+      if (tuple.getTableDescriptor() != null) {
+        tableDescriptors.add(tuple.getTableDescriptor());
+      }
     }
     return tableDescriptors;
   }

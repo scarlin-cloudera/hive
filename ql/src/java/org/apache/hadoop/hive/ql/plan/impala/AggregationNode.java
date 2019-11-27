@@ -43,11 +43,10 @@ public class AggregationNode extends PlanNode {
 
   private final HiveAggregate aggregate_;
 
-  public AggregationNode(RelOptCluster cluster, RelTraitSet traitSet,
-    HiveAggregate aggregate, PlanId id, Map<IdGenType, IdGenerator<?>> idGenerators) {
-    super(cluster, traitSet, aggregate.getRowType(), TupleDescriptor.createTupleDesc(aggregate, idGenerators),
+  public AggregationNode(HiveAggregate agg, PlanId id, Map<IdGenType, IdGenerator<?>> idGenerators) {
+    super(agg, TupleDescriptor.createTupleDesc(agg, idGenerators),
         null, id, "AGGREGATE");
-    aggregate_ = aggregate;
+    aggregate_ = agg;
   }
 
   @Override
@@ -69,12 +68,11 @@ public class AggregationNode extends PlanNode {
     List<TAggregator> aggregators = Lists.newArrayList();
     //XXX: will have to figure out if there are two aggregators
     assert getInputs().size() == 1;
-    assert getInput(0) instanceof ImpalaProjectNode;
-    ImpalaProjectNode project = (ImpalaProjectNode) getInput(0);
-    List<TupleDescriptor> inputTupleDescs = project.getTupleDescriptors();
+    assert getInput(0) instanceof PlanNode;
+    List<TupleDescriptor> inputTupleDescs = ((PlanNode)getInput(0)).getTupleDescriptors();
     assert inputTupleDescs.size() == 1;
     TupleDescriptor inputTupleDesc = inputTupleDescs.get(0);
-    List<Column> columns = project.getColumns();
+    List<? extends Column> columns = ((PlanNode)getInput(0)).getColumns();
     //XXX: Also will have to figure out if there are two aggs
     assert columns.size() == 1;
     //XXX: confused as to which level contains multiple TAgregators and which
@@ -118,7 +116,7 @@ public class AggregationNode extends PlanNode {
   }
 
   private TBackendResourceProfile getResourceProfile() {
-    ResourceProfile resourceProfile = new ResourceProfile(true, -1L, 0L, 9223372036854775807L, 2097152L, 2097152L, -1);
+    ResourceProfile resourceProfile = new ResourceProfile(false, -1L, 0L, 9223372036854775807L, 2097152L, 2097152L, -1);
     return resourceProfile.toThrift();
   }
 
