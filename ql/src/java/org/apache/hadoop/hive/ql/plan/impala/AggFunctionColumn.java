@@ -90,6 +90,8 @@ public class AggFunctionColumn extends FunctionColumn {
 
   private TAggregateFunction getTAggregateFunction() {
     TAggregateFunction aggFunction = new TAggregateFunction();
+    //XXX: this is wrong, but works for sum
+    aggFunction.setIntermediate_type(getTColumnType());
     //XXX: Need better way to get symbols
     //XXX: need all functions, don't want to put in null, heck, this is just a mess right now, and
     //XXX: hardcoded only for sum

@@ -63,6 +63,7 @@ import java.util.ArrayList;
     execRequest.setQuery_exec_request(getQueryExecRequest(context, queryString));
     execRequest.setUser_has_profile_access(true);
     execRequest.setAnalysis_warnings(new ArrayList<>());
+    System.out.println("SJC: GETTING EXEC REQUEST " + execRequest);
     return execRequest;
   }
   

@@ -32,6 +32,7 @@ import org.apache.impala.thrift.TBackendResourceProfile;
 import org.apache.impala.thrift.TExplainLevel;
 import org.apache.impala.thrift.TExpr;
 import org.apache.impala.thrift.TPlanNode;
+import org.apache.impala.thrift.TPlanNodeType;
 
 import com.google.common.collect.Lists;
 
@@ -52,6 +53,7 @@ public class AggregationNode extends PlanNode {
   @Override
   protected TPlanNode createDerivedTPlanNode() {
     TPlanNode planNode = new TPlanNode();
+    planNode.setNode_type(TPlanNodeType.AGGREGATION_NODE);
     TAggregationNode aggregateNode = new TAggregationNode();
     aggregateNode.setAggregators(getAggregators());
     //XXX: don't hardcode this
@@ -81,17 +83,19 @@ public class AggregationNode extends PlanNode {
       TAggregator aggregator = new TAggregator();
       AggFunctionColumn aggFunc = new AggFunctionColumn(aggCall, columns.get(0));
       //XXX: handle groups
-      aggregator.setGrouping_exprs(Lists.newArrayList());
+//      aggregator.setGrouping_exprs(Lists.newArrayList());
+      aggregator.setGrouping_exprs(null);
       //XXX: if groups > 0, and query option not set, set to true
       aggregator.setUse_streaming_preaggregation(false);
       List<TExpr> exprs = Lists.newArrayList();
       exprs.add(getAggregateFunctions(aggFunc, inputTupleDesc));
       aggregator.setAggregate_functions(exprs);
     //XXX: handle intermediate
-      aggregator.setIntermediate_tuple_id(inputTupleDesc.getTupleId());
-      aggregator.setOutput_tuple_id(inputTupleDesc.getTupleId());
+      assert getTupleDescriptors().size() == 1;
+      aggregator.setIntermediate_tuple_id(getTupleDescriptors().get(0).getTupleId());
+      aggregator.setOutput_tuple_id(getTupleDescriptors().get(0).getTupleId());
     //XXX: do not hardcode this
-      aggregator.setNeed_finalize(false);
+      aggregator.setNeed_finalize(true);
       aggregator.setResource_profile(getResourceProfile());
       aggregators.add(aggregator);
     }

@@ -178,35 +178,48 @@ public abstract class PlanNode extends ImpalaMultiRel {
   }
 
   public List<TupleDescriptor> gatherAllTupleDescriptors() {
-    //XXX: no children yet, can just return these descriptors
-    return tuples_;
+    List<TupleDescriptor> tupleDescriptors = Lists.newArrayList(tuples_);
+    for (RelNode r : getInputs()) {
+      assert r instanceof PlanNode;
+      tupleDescriptors.addAll(((PlanNode)r).gatherAllTupleDescriptors());
+    }
+    return tupleDescriptors;
   }
 
   public List<TableDescriptor> gatherAllTableDescriptors() {
-    //XXX: no children yet, can just return these descriptors
     List<TableDescriptor> tableDescriptors = Lists.newArrayList();
     for (TupleDescriptor tuple : tuples_) {
       if (tuple.getTableDescriptor() != null) {
         tableDescriptors.add(tuple.getTableDescriptor());
       }
     }
+    for (RelNode r : getInputs()) {
+      assert r instanceof PlanNode;
+      tableDescriptors.addAll(((PlanNode)r).gatherAllTableDescriptors());
+    }
     return tableDescriptors;
   }
 
   public List<ScanNode> gatherAllScanNodes() {
-    //XXX: no children yet, can just return this if it is a scan node 
     List<ScanNode> scanNodes = Lists.newArrayList();
     if (this instanceof ScanNode) {
       scanNodes.add((ScanNode) this);
+    }
+    for (RelNode r : getInputs()) {
+      assert r instanceof PlanNode;
+      scanNodes.addAll(((PlanNode)r).gatherAllScanNodes());
     }
     return scanNodes;
   }
 
   public List<SlotDescriptor> gatherAllSlotDescriptors() {
-    //XXX: no children yet, can just return these descriptors
     List<SlotDescriptor> slotDescriptors = Lists.newArrayList();
     for (TupleDescriptor tuple : tuples_) {
       slotDescriptors.addAll(tuple.getSlotDescriptors());
+    }
+    for (RelNode r : getInputs()) {
+      assert r instanceof PlanNode;
+      slotDescriptors.addAll(((PlanNode)r).gatherAllSlotDescriptors());
     }
     return slotDescriptors;
   }
@@ -382,7 +395,7 @@ public abstract class PlanNode extends ImpalaMultiRel {
 
   private List<TExpr> getConjuncts() {
     if (filter_ == null) {
-      return ImmutableList.of();
+      return null;
     }
     //XXX: only handles 1 level of expression (no ands yet)
     TExpr expr = new TExpr();
