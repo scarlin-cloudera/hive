@@ -128,6 +128,7 @@ public abstract class PlanNode extends ImpalaMultiRel {
   public TPlanNode getTPlanNode() {
     TPlanNode planNode = createDerivedTPlanNode();
     planNode.setNode_id(id_.asInt());
+    planNode.setNum_children(getInputs().size());
     planNode.setLimit(-1);
 
     TExecStats estimatedStats = new TExecStats();
@@ -259,6 +260,10 @@ public abstract class PlanNode extends ImpalaMultiRel {
   public String getExplainString(String rootPrefix, String prefix,
       /*TQueryOptions queryOptions,*/ TExplainLevel detailLevel) {
     StringBuilder expBuilder = new StringBuilder();
+    //XXX: temporarily broken until I can resolve this with getInputs().
+    if (true) {
+      return expBuilder.toString();
+    }
     String detailPrefix = prefix;
     String filler;
     boolean printFiller = (detailLevel.ordinal() >= TExplainLevel.STANDARD.ordinal());
@@ -267,7 +272,7 @@ public abstract class PlanNode extends ImpalaMultiRel {
     // fragment boundaries.
     //XXX: need to handle inputs
 /*
-    boolean traverseChildren = !children_.isEmpty() &&
+    boolean traverseChildren = getInputs().size() > 0 &&
         !(this instanceof ExchangeNode && detailLevel == TExplainLevel.VERBOSE);
 */
     boolean traverseChildren = false;

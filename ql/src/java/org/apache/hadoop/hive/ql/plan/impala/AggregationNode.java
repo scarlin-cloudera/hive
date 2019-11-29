@@ -31,6 +31,7 @@ import org.apache.impala.thrift.TAggregator;
 import org.apache.impala.thrift.TBackendResourceProfile;
 import org.apache.impala.thrift.TExplainLevel;
 import org.apache.impala.thrift.TExpr;
+import org.apache.impala.thrift.TExprNode;
 import org.apache.impala.thrift.TPlanNode;
 import org.apache.impala.thrift.TPlanNodeType;
 
@@ -74,21 +75,16 @@ public class AggregationNode extends PlanNode {
     List<TupleDescriptor> inputTupleDescs = ((PlanNode)getInput(0)).getTupleDescriptors();
     assert inputTupleDescs.size() == 1;
     TupleDescriptor inputTupleDesc = inputTupleDescs.get(0);
-    List<? extends Column> columns = ((PlanNode)getInput(0)).getColumns();
     //XXX: Also will have to figure out if there are two aggs
-    assert columns.size() == 1;
     //XXX: confused as to which level contains multiple TAgregators and which
     // contains multiple multiple aggregate functions
     for (AggregateCall aggCall : aggregate_.getAggCallList()) {
       TAggregator aggregator = new TAggregator();
-      AggFunctionColumn aggFunc = new AggFunctionColumn(aggCall, columns.get(0));
-      //XXX: handle groups
-//      aggregator.setGrouping_exprs(Lists.newArrayList());
-      aggregator.setGrouping_exprs(null);
+      aggregator.setGrouping_exprs(getGroupingExprs(aggCall, inputTupleDesc));
       //XXX: if groups > 0, and query option not set, set to true
-      aggregator.setUse_streaming_preaggregation(false);
+      aggregator.setUse_streaming_preaggregation(aggregator.getGrouping_exprs() != null);
       List<TExpr> exprs = Lists.newArrayList();
-      exprs.add(getAggregateFunctions(aggFunc, inputTupleDesc));
+      exprs.add(getAggregateFunctions(aggCall, inputTupleDesc));
       aggregator.setAggregate_functions(exprs);
     //XXX: handle intermediate
       assert getTupleDescriptors().size() == 1;
@@ -102,8 +98,33 @@ public class AggregationNode extends PlanNode {
     return aggregators;
   }
 
-  private TExpr getAggregateFunctions(AggFunctionColumn aggFunc, TupleDescriptor tupleDesc) {
+  private List<TExpr> getGroupingExprs(AggregateCall aggCall, TupleDescriptor tupleDesc) {
+    List<TExpr> exprs = Lists.newArrayList();
+    if (aggregate_.getGroupCount() == 0) {
+      return null;
+    }
+    assert getInputs().size() == 1;
+    assert getInput(0) instanceof PlanNode;
+    List<? extends Column> columns = ((PlanNode)getInput(0)).getColumns();
+    //XXX: Right now, all groups are being placed in one expr list.  I'm not sure
+    // if this is true if there are multiple aggregates.
+    // Plus:  do we need to weed out duplicates?
     TExpr expr = new TExpr();
+    for (int group : aggregate_.getGroupSet()) {
+      SlotDescriptor slotDesc = tupleDesc.getSlotDescriptor(group);
+      expr.addToNodes(slotDesc.getTExprNode());
+    }
+    exprs.add(expr);
+    return exprs;
+  }
+
+  private TExpr getAggregateFunctions(AggregateCall aggCall, TupleDescriptor tupleDesc) {
+    TExpr expr = new TExpr();
+    List<? extends Column> columns = ((PlanNode)getInput(0)).getColumns();
+    List<Integer> indexes = aggCall.getArgList();
+    assert indexes.size() == 1;
+    SlotDescriptor slotDesc = tupleDesc.getSlotDescriptor(indexes.get(0));
+    AggFunctionColumn aggFunc = new AggFunctionColumn(aggCall, slotDesc.getColumn());
     expr.setNodes(aggFunc.getTExprNodeList(tupleDesc));
     return expr;
   }

@@ -97,4 +97,8 @@ public class SlotDescriptor {
   public int getIdInt() {
     return slotId_.asInt();
   }
+
+  public Column getColumn() {
+    return column_;
+  }
 }

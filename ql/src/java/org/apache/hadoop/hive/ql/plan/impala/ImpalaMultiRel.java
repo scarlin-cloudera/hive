@@ -21,6 +21,7 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.AbstractRelNode;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelVisitor;
+import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.calcite.rel.type.RelDataType;
 
@@ -72,7 +73,8 @@ public abstract class ImpalaMultiRel extends AbstractRelNode {
   public void childrenAccept(RelVisitor visitor) {
     int i = 0;
     for (RelNode input : inputs) {
-      visitor.visit(inputs.get(i), i++, this);
+      visitor.visit(inputs.get(i), i, this);
+      i+=1;
     }
   }
 
@@ -81,6 +83,14 @@ public abstract class ImpalaMultiRel extends AbstractRelNode {
       RelNode rel) {
     assert ordinalInParent < inputs.size();
     this.inputs.set(ordinalInParent, rel);
+  }
+
+  public RelWriter explainTerms(RelWriter pw) {
+    RelWriter ret = super.explainTerms(pw);
+    for (RelNode input : inputs) {
+      ret.input("input", input);
+    }
+    return ret;
   }
 }
 

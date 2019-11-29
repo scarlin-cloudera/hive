@@ -2349,18 +2349,18 @@ public class CalcitePlanner extends SemanticAnalyzer {
 
     private void applyImpalaRules(HepProgramBuilder program) {
       List<RelOptRule> impalaRules = Lists.newArrayList();
-      impalaRules.add(new HiveImpalaRules.ImpalaScanRule(HiveRelFactories.HIVE_BUILDER,
+      impalaRules.add(new HiveImpalaRules.ImpalaFilterScanRule(HiveRelFactories.HIVE_BUILDER,
               ctx.getImpalaContext().getIdGenerators()));
-      generatePartialProgram(program, false, HepMatchOrder.BOTTOM_UP,
+      generatePartialProgram(program, false, HepMatchOrder.DEPTH_FIRST,
               impalaRules.toArray(new RelOptRule[impalaRules.size()]));
       impalaRules.clear();
+      impalaRules.add(new HiveImpalaRules.ImpalaScanRule(HiveRelFactories.HIVE_BUILDER,
+              ctx.getImpalaContext().getIdGenerators()));
       impalaRules.add(new HiveImpalaRules.ImpalaProjectRule(HiveRelFactories.HIVE_BUILDER,
               ctx.getImpalaContext().getIdGenerators()));
       impalaRules.add(new HiveImpalaRules.ImpalaAggRule(HiveRelFactories.HIVE_BUILDER,
               ctx.getImpalaContext().getIdGenerators()));
-      impalaRules.add(new HiveImpalaRules.ImpalaFilterScanRule(HiveRelFactories.HIVE_BUILDER,
-              ctx.getImpalaContext().getIdGenerators()));
-      generatePartialProgram(program, false, HepMatchOrder.BOTTOM_UP,
+      generatePartialProgram(program, false, HepMatchOrder.DEPTH_FIRST,
               impalaRules.toArray(new RelOptRule[impalaRules.size()]));
     }
 
