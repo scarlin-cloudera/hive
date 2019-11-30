@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.List;
 
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -44,8 +45,8 @@ public abstract class FunctionColumn extends Column {
 
   private static final Logger LOG = LoggerFactory.getLogger(FunctionColumn.class);
 
-  public FunctionColumn(List<RexNode> operands, SqlTypeName returnType, String functionName) {
-    super(functionName, returnType);
+  public FunctionColumn(RelDataType returnType, List<RexNode> operands, String functionName) {
+    super(returnType, functionName);
     List<Column> columns = Lists.newArrayList();
     for (RexNode operand : operands) {
       columns.add(ExprFactory.createExpr(operand));
@@ -53,8 +54,8 @@ public abstract class FunctionColumn extends Column {
     operands_ = ImmutableList.<Column>builder().addAll(columns).build();
   }
 
-  public FunctionColumn(Column operand, SqlTypeName returnType, String functionName) {
-    super(functionName, returnType);
+  public FunctionColumn(RelDataType returnType, Column operand, String functionName) {
+    super(returnType, functionName);
     operands_ = ImmutableList.of(operand);
   }
 

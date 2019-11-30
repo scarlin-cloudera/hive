@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.List;
 
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -41,7 +42,7 @@ public class ScalarFunctionColumn extends FunctionColumn {
   private static final Logger LOG = LoggerFactory.getLogger(ScalarFunctionColumn.class);
 
   public ScalarFunctionColumn(RexCall functionCall) {
-    super(functionCall.getOperands(), functionCall.getType().getSqlTypeName(),
+    super(functionCall.getType(), functionCall.getOperands(),
         functionCall.getOperator().getName());
   }
 

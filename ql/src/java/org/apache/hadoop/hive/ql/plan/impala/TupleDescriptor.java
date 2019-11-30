@@ -168,7 +168,7 @@ public class TupleDescriptor {
         ColumnDescriptor columnDesc = tableDescriptor_.getColumnDescriptor(index);
         colName = tableDescriptor_.getFullTableName() + "." + columnDesc.getName();
       }
-      columns.add(new SlotRefColumn(index, colName, dataTypeField.getType().getSqlTypeName()));
+      columns.add(new SlotRefColumn(dataTypeField, colName));
     }
     return columns;
   }

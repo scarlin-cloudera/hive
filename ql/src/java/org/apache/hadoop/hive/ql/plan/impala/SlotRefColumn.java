@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.ql.plan.impala;
 
 import java.util.List;
 
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -45,18 +46,18 @@ public class SlotRefColumn extends Column implements Comparable<Column> {
   public SlotRefColumn(RexInputRef inputRef, String tableName, ColumnDescriptor columnDesc) {
     // XXX:Columndesc.getName() is used to populate explain string for plan root sink
     // if for some reason this needs changing, be aware of this
-    super(tableName + "." + columnDesc.getName(), inputRef.getType().getSqlTypeName());
+    super(inputRef.getType(), tableName + "." + columnDesc.getName());
     index = inputRef.getIndex();
   }
  
   public SlotRefColumn(RexInputRef inputRef) {
-    super(inputRef.getName(), inputRef.getType().getSqlTypeName());
+    super(inputRef.getType(), inputRef.getName());
     index = inputRef.getIndex();
   }
 
-  public SlotRefColumn(int index, String name, SqlTypeName type) {
-    super(name, type);
-    this.index = index;
+  public SlotRefColumn(RelDataTypeField field, String name) {
+    super(field.getType(), name);
+    index = field.getIndex();
   }
 
   public int getIndex() {

@@ -41,7 +41,7 @@ public class AggFunctionColumn extends FunctionColumn {
   private static final Logger LOG = LoggerFactory.getLogger(AggFunctionColumn.class);
 
   public AggFunctionColumn(AggregateCall function, Column operand) {
-    super(operand, function.getType().getSqlTypeName(),
+    super(function.getType(), operand,
         function.getAggregation().getName());
   }
 
