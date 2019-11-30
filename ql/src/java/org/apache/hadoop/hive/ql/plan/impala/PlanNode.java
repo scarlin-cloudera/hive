@@ -31,6 +31,7 @@ import org.apache.impala.thrift.TExecStats;
 import org.apache.impala.thrift.TExplainLevel;
 import org.apache.impala.thrift.TExpr;
 import org.apache.impala.thrift.TExprNode;
+import org.apache.impala.thrift.TPipelineMembership;
 import org.apache.impala.thrift.TPlan;
 import org.apache.impala.thrift.TPlanNode;
 import org.apache.impala.thrift.TPlanRootSink;
@@ -64,7 +65,7 @@ public abstract class PlanNode extends ImpalaMultiRel {
 
   private final ResourceProfile nodeResourceProfile_;
 
-  private final ImmutableList<PipelineMembership> pipelines_;
+  private List<PipelineMembership> cachedPipelines_;
 
   private final HiveFilter filter_;
 
@@ -87,9 +88,6 @@ public abstract class PlanNode extends ImpalaMultiRel {
     displayName_ = displayName;
     tuples_ = new ImmutableList.Builder<TupleDescriptor>().addAll(tuples).build();
     nodeResourceProfile_ = new ResourceProfile(true, 1024*1024, 1024*1024, 1024*1024*8, -1, 1024*1024*8, 1);
-    //XXX: when we have children, this will need to change
-    pipelines_ = new ImmutableList.Builder<PipelineMembership>().add(
-        new PipelineMembership(id_, 0, TExecNodePhase.GETNEXT)).build();
     filter_ = filter;
   }
 
@@ -100,7 +98,6 @@ public abstract class PlanNode extends ImpalaMultiRel {
     id_ = null;
     displayName_ = null;
     nodeResourceProfile_ = null;
-    pipelines_ = ImmutableList.of();
     filter_ = null;
   }
 
@@ -162,10 +159,8 @@ public abstract class PlanNode extends ImpalaMultiRel {
 
     Preconditions.checkState(nodeResourceProfile_.isValid());
     planNode.setResource_profile(nodeResourceProfile_.toThrift());
-    planNode.setPipelines(Lists.newArrayList());
-    for (PipelineMembership pipe : pipelines_) {
-      planNode.addToPipelines(pipe.toThrift());
-    }   
+    List<PipelineMembership> pipelines = computePipelineMembership();
+    planNode.setPipelines(getTPipelineMembership(pipelines));
     return planNode;
   }
 
@@ -173,7 +168,7 @@ public abstract class PlanNode extends ImpalaMultiRel {
     if (!implementsTPlanNode()) {
       assert getInputs().size() == 1;
       assert getInput(0) instanceof PlanNode;
-      return ((PlanNode) getInput(0)).getTupleDescriptors();
+      return (getPlanNodeInput(0)).getTupleDescriptors();
     }
     return tuples_;
   }
@@ -331,17 +326,16 @@ public abstract class PlanNode extends ImpalaMultiRel {
     if (detailLevel.ordinal() >= TExplainLevel.EXTENDED.ordinal()) {
       expBuilder.append(detailPrefix);
       expBuilder.append("in pipelines: ");
-      if (pipelines_ != null) {
-        List<String> pipelines = Lists.newArrayList();
-        for (PipelineMembership pipe: pipelines_) {
-          pipelines.add(pipe.getExplainString());
-        }
-        if (pipelines.isEmpty()) expBuilder.append("<none>");
-        else expBuilder.append(Joiner.on(", ").join(pipelines));
-        expBuilder.append("\n");
-      } else {
-        expBuilder.append("<not computed>");
+      List<String> pipelines = Lists.newArrayList();
+      for (PipelineMembership pipe: computePipelineMembership()) {
+        pipelines.add(pipe.getExplainString());
       }
+      if (pipelines.isEmpty()) {
+        expBuilder.append("<none>");
+      } else {
+        expBuilder.append(Joiner.on(", ").join(pipelines));
+      }
+      expBuilder.append("\n");
     }
 
     // Print the children. Do not traverse into the children of an Exchange node to
@@ -396,6 +390,65 @@ public abstract class PlanNode extends ImpalaMultiRel {
       
   protected String getOffsetExplainString(String prefix) {
     return "";
+  }
+
+  public PlanNode getPlanNodeInput(int i) {
+    return (PlanNode) getInput(i);
+  }
+
+  /**
+   * Returns true if this plan node can output its first row only after consuming
+   * all rows of all its children. This method is used to group plan nodes
+   * into pipelined units for resource estimation.
+   */
+  public boolean isBlockingNode() {
+      return false;
+  }
+
+  public List<PipelineMembership> computePipelineMembership() {
+    // we don't want to recalculate if we hit the child node more than
+    // once, so this method will cache the pipelinemembership
+    if (cachedPipelines_ != null) { 
+      return cachedPipelines_;
+    }
+    cachedPipelines_= Lists.newArrayList(); 
+    assert getInputs().size() <= 1;
+    if (getInputs().size() == 0) {
+      cachedPipelines_.add(new PipelineMembership(id_, 0, TExecNodePhase.GETNEXT));
+      return cachedPipelines_;
+    }
+
+    // Default behaviour for simple blocking or streaming nodes.
+    if (isBlockingNode()) {
+      // Executes as root of pipelines that child belongs to and leaf of another
+      // pipeline.
+      cachedPipelines_.add(new PipelineMembership(id_, 0, TExecNodePhase.GETNEXT));
+      for (PipelineMembership childPipeline : getPlanNodeInput(0).computePipelineMembership()) {
+        if (childPipeline.getPhase() == TExecNodePhase.GETNEXT) {
+          cachedPipelines_.add(new PipelineMembership(
+              childPipeline.getId(), childPipeline.getHeight() + 1, TExecNodePhase.OPEN));
+        }
+      }
+    } else {
+      // Streaming with child, e.g. SELECT. Executes as part of all pipelines the child
+      // belongs to.
+      cachedPipelines_ = Lists.newArrayList();
+      for (PipelineMembership childPipeline : getPlanNodeInput(0).computePipelineMembership()) {
+        if (childPipeline.getPhase() == TExecNodePhase.GETNEXT) {
+           cachedPipelines_.add(new PipelineMembership(
+               childPipeline.getId(), childPipeline.getHeight() + 1, TExecNodePhase.GETNEXT));
+        }
+      }
+    }
+    return cachedPipelines_;
+  }
+
+  private List<TPipelineMembership> getTPipelineMembership(List<PipelineMembership> pipelines) {
+    List<TPipelineMembership> tPipelines = Lists.newArrayList();
+    for (PipelineMembership p : pipelines) {
+      tPipelines.add(p.toThrift());
+    }
+    return tPipelines;
   }
 
   private List<TExpr> getConjuncts() {

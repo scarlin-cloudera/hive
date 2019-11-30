@@ -150,4 +150,9 @@ public class AggregationNode extends PlanNode {
     assert getTupleDescriptors().size() == 1;
     return getTupleDescriptors().get(0).getColumns();
   }
+
+  @Override
+  public boolean isBlockingNode() {
+    return aggregate_.getGroupCount() == 0;
+  }
 }
