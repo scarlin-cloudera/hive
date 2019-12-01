@@ -55,9 +55,9 @@ public class PlanFragment {
     planFragment.setPartition(getUnpartitionedDataPartition());
     //XXX: hardcoded
     //XXX: increased by JFS
-    planFragment.setMin_mem_reservation_bytes(1048576);
+    planFragment.setMin_mem_reservation_bytes(306184192);
     //XXX: hardcoded
-    planFragment.setInitial_mem_reservation_total_claims(1048576);
+    planFragment.setInitial_mem_reservation_total_claims(35659776);
     //XXX: hardcoded
     planFragment.setRuntime_filters_reservation_bytes(0);
     //XXX: hardcoded

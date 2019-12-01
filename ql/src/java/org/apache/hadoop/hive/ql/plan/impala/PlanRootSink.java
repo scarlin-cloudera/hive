@@ -53,7 +53,7 @@ public class PlanRootSink extends DataSink {
     dataSink.setType(TDataSinkType.PLAN_ROOT_SINK);
     TPlanRootSink planRootSink = new TPlanRootSink();
     //XXX:
-    planRootSink.setResource_profile(ResourceProfile.invalid().toThrift());
+    planRootSink.setResource_profile(ResourceProfile.noReservation(16384).toThrift());
     dataSink.setPlan_root_sink(planRootSink);
     //XXX: fill this in
     dataSink.setLabel("");

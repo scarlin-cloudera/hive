@@ -81,8 +81,10 @@ public class AggregationNode extends PlanNode {
     for (AggregateCall aggCall : aggregate_.getAggCallList()) {
       TAggregator aggregator = new TAggregator();
       aggregator.setGrouping_exprs(getGroupingExprs(aggCall, inputTupleDesc));
-      //XXX: if groups > 0, and query option not set, set to true
-      aggregator.setUse_streaming_preaggregation(aggregator.getGrouping_exprs() != null);
+      //XXX: need to understand this logic better, producing wrong results on query
+      // select sum(c1) from tbl group by s1;
+//      aggregator.setUse_streaming_preaggregation(aggregator.getGrouping_exprs() != null);
+      aggregator.setUse_streaming_preaggregation(false);
       List<TExpr> exprs = Lists.newArrayList();
       exprs.add(getAggregateFunctions(aggCall, inputTupleDesc));
       aggregator.setAggregate_functions(exprs);
@@ -92,7 +94,7 @@ public class AggregationNode extends PlanNode {
       aggregator.setOutput_tuple_id(getTupleDescriptors().get(0).getTupleId());
     //XXX: do not hardcode this
       aggregator.setNeed_finalize(true);
-      aggregator.setResource_profile(getResourceProfile());
+      aggregator.setResource_profile(getAggResourceProfile().toThrift());
       aggregators.add(aggregator);
     }
     return aggregators;
@@ -140,9 +142,15 @@ public class AggregationNode extends PlanNode {
     return true;
   }
 
-  private TBackendResourceProfile getResourceProfile() {
-    ResourceProfile resourceProfile = new ResourceProfile(false, -1L, 0L, 9223372036854775807L, 2097152L, 2097152L, -1);
-    return resourceProfile.toThrift();
+  private ResourceProfile getAggResourceProfile() {
+    ResourceProfile resourceProfile = new ResourceProfile(false, -1L, 35651584L, 9223372036854775807L, 2097152L, 2097152L, -1);
+    return resourceProfile;
+  }
+
+  @Override
+  protected ResourceProfile getResourceProfile() {
+    ResourceProfile resourceProfile = new ResourceProfile(false, -1L, 35651584L, 9223372036854775807L, 2097152L, 2097152L, -1);
+    return resourceProfile;
   }
 
   @Override

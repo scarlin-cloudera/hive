@@ -26,6 +26,7 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.hadoop.hive.ql.optimizer.calcite.reloperators.HiveFilter;
+import org.apache.impala.thrift.TBackendResourceProfile;
 import org.apache.impala.thrift.TExecNodePhase;
 import org.apache.impala.thrift.TExecStats;
 import org.apache.impala.thrift.TExplainLevel;
@@ -63,8 +64,6 @@ public abstract class PlanNode extends ImpalaMultiRel {
 
   private final ImmutableList<TupleDescriptor> tuples_;
 
-  private final ResourceProfile nodeResourceProfile_;
-
   private List<PipelineMembership> cachedPipelines_;
 
   private final HiveFilter filter_;
@@ -87,7 +86,6 @@ public abstract class PlanNode extends ImpalaMultiRel {
     id_ = planId;
     displayName_ = displayName;
     tuples_ = new ImmutableList.Builder<TupleDescriptor>().addAll(tuples).build();
-    nodeResourceProfile_ = new ResourceProfile(true, 1024*1024, 1024*1024, 1024*1024*8, -1, 1024*1024*8, 1);
     filter_ = filter;
   }
 
@@ -97,7 +95,6 @@ public abstract class PlanNode extends ImpalaMultiRel {
     tuples_ = new ImmutableList.Builder<TupleDescriptor>().addAll(tuples).build();
     id_ = null;
     displayName_ = null;
-    nodeResourceProfile_ = null;
     filter_ = null;
   }
 
@@ -157,8 +154,7 @@ public abstract class PlanNode extends ImpalaMultiRel {
     */
     planNode.setDisable_codegen(false);
 
-    Preconditions.checkState(nodeResourceProfile_.isValid());
-    planNode.setResource_profile(nodeResourceProfile_.toThrift());
+    planNode.setResource_profile(getResourceProfile().toThrift());
     List<PipelineMembership> pipelines = computePipelineMembership();
     planNode.setPipelines(getTPipelineMembership(pipelines));
     return planNode;
@@ -297,7 +293,7 @@ public abstract class PlanNode extends ImpalaMultiRel {
     if (detailLevel.ordinal() >= TExplainLevel.EXTENDED.ordinal()) {
       // Print resource profile.
       expBuilder.append(detailPrefix);
-      expBuilder.append(nodeResourceProfile_.getExplainString());
+      expBuilder.append(getResourceProfile().getExplainString());
       expBuilder.append("\n");
   
       // Print tuple ids, row size and cardinality.
@@ -403,6 +399,11 @@ public abstract class PlanNode extends ImpalaMultiRel {
    */
   public boolean isBlockingNode() {
       return false;
+  }
+
+  protected ResourceProfile getResourceProfile() {
+    ResourceProfile profile = new ResourceProfile(false, -1L, 8192L, 9223372036854775807L, -1L, -1L, -1);
+    return profile;
   }
 
   public List<PipelineMembership> computePipelineMembership() {
